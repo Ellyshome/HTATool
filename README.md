@@ -5,3 +5,5 @@
 将待处理的excel文件拖拽到图标上
 以后可能补充开发基于gradio的界面
 
+
+statistics.py是数用药量的工具
