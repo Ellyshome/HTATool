@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>医药费用处理工具</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
+            color: #333;
+            min-height: 100vh;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        .container {
+            width: 90%;
+            max-width: 800px;
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+        
+        h1 {
+            color: #2c5364;
+            text-align: center;
+            margin-bottom: 20px;
+            font-size: 2.2rem;
+        }
+        
+        .description {
+            text-align: center;
+            color: #555;
+            margin-bottom: 30px;
+            line-height: 1.6;
+        }
+        
+        .upload-section {
+            margin-bottom: 25px;
+            text-align: center;
+        }
+        
+        .file-input {
+            display: none;
+        }
+        
+        .file-label {
+            display: block;
+            padding: 15px 20px;
+            background: #f0f7ff;
+            border: 2px dashed #2c5364;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-bottom: 15px;
+        }
+        
+        .file-label:hover {
+            background: #e0eeff;
+            border-color: #1a4758;
+        }
+        
+        .file-name {
+            margin-top: 10px;
+            font-size: 0.9rem;
+            color: #666;
+        }
+        
+        .process-btn {
+            background: #2c5364;
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1.1rem;
+            font-weight: bold;
+            transition: background 0.3s;
+            display: block;
+            margin: 0 auto;
+            width: 200px;
+        }
+        
+        .process-btn:hover {
+            background: #203a43;
+        }
+        
+        .process-btn:disabled {
+            background: #cccccc;
+            cursor: not-allowed;
+        }
+        
+        .result-dialog {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 5px 25px rgba(0, 0, 0, 0.3);
+            z-index: 1000;
+            width: 90%;
+            max-width: 700px;
+            max-height: 80vh;
+            overflow: hidden;
+        }
+        
+        .dialog-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .dialog-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            justify-content: flex-end;
+        }
+        
+        .save-btn {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        
+        .save-btn:hover {
+            background: #218838;
+        }
+        
+        .dialog-title {
+            font-size: 1.4rem;
+            color: #2c5364;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #999;
+        }
+        
+        .close-btn:hover {
+            color: #333;
+        }
+        
+        .result-content {
+            max-height: 60vh;
+            overflow-y: auto;
+            font-family: 'Consolas', 'Monaco', monospace;
+            white-space: pre-wrap;
+            padding: 10px;
+            background: #f8f8f8;
+            border-radius: 8px;
+        }
+        
+        .overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 999;
+        }
+        
+        .status {
+            text-align: center;
+            margin: 15px 0;
+            color: #2c5364;
+            font-weight: bold;
+            min-height: 24px;
+        }
+        
+        .no-file {
+            text-align: center;
+            color: #ff5252;
+            margin-top: 10px;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>医药费用处理工具</h1>
+        <p class="description">上传包含西药费或中成药费数据的文本文件，点击处理按钮提取费用信息</p>
+        
+        <div class="upload-section">
+            <input type="file" id="fileInput" accept=".txt" class="file-input">
+            <label for="fileInput" class="file-label">
+                <strong>点击选择文件</strong><br>
+                <span>或拖放文件到此处</span>
+            </label>
+            <div id="fileName" class="file-name">未选择文件</div>
+            <div id="noFile" class="no-file">请先选择文件</div>
+        </div>
+        
+        <div class="status" id="status"></div>
+        
+        <button id="processBtn" class="process-btn" disabled>处理文件</button>
+        
+        <div class="overlay" id="overlay"></div>
+        <div class="result-dialog" id="resultDialog">
+            <div class="dialog-header">
+                <h2 class="dialog-title">处理结果</h2>
+                <button class="close-btn" id="closeDialog">&times;</button>
+            </div>
+            <div class="result-content" id="resultContent"></div>
+            <div class="dialog-actions">
+                <button id="saveBtn" class="save-btn">保存为Excel</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 获取DOM元素
+        const fileInput = document.getElementById('fileInput');
+        const fileName = document.getElementById('fileName');
+        const processBtn = document.getElementById('processBtn');
+        const status = document.getElementById('status');
+        const resultDialog = document.getElementById('resultDialog');
+        const resultContent = document.getElementById('resultContent');
+        const overlay = document.getElementById('overlay');
+        const closeDialog = document.getElementById('closeDialog');
+        const noFile = document.getElementById('noFile');
+        const saveBtn = document.getElementById('saveBtn');
+        
+        let selectedFile = null;
+        
+        // 文件选择处理
+        fileInput.addEventListener('change', function(e) {
+            selectedFile = e.target.files[0];
+            if (selectedFile) {
+                fileName.textContent = `已选择: ${selectedFile.name}`;
+                processBtn.disabled = false;
+                status.textContent = '可以处理文件';
+                noFile.style.display = 'none';
+            } else {
+                fileName.textContent = '未选择文件';
+                processBtn.disabled = true;
+                status.textContent = '';
+            }
+        });
+        
+        // 拖放文件功能
+        const fileLabel = document.querySelector('.file-label');
+        fileLabel.addEventListener('dragover', function(e) {
+            e.preventDefault();
+            fileLabel.style.background = '#e0eeff';
+            fileLabel.style.borderColor = '#1a4758';
+        });
+        
+        fileLabel.addEventListener('dragleave', function() {
+            fileLabel.style.background = '#f0f7ff';
+            fileLabel.style.borderColor = '#2c5364';
+        });
+        
+        fileLabel.addEventListener('drop', function(e) {
+            e.preventDefault();
+            fileLabel.style.background = '#f0f7ff';
+            fileLabel.style.borderColor = '#2c5364';
+            
+            if (e.dataTransfer.files.length) {
+                fileInput.files = e.dataTransfer.files;
+                const event = new Event('change');
+                fileInput.dispatchEvent(event);
+            }
+        });
+        
+        // 处理按钮点击事件
+        processBtn.addEventListener('click', function() {
+            if (!selectedFile) {
+                noFile.style.display = 'block';
+                return;
+            }
+            
+            status.textContent = '处理中...';
+            
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const content = e.target.result;
+                const result = getlin(content);
+                
+                // 显示结果
+                let output = '';
+                let idx = 1;
+                for (const key in result) {
+                    if (result.hasOwnProperty(key)) {
+                        output += `${idx}\t${result[key]} \t: ${key}\n`;
+                        idx++;
+                    }
+                }
+                
+                resultContent.textContent = output;
+                status.textContent = `处理完成！找到 ${Object.keys(result).length} 个条目`;
+                
+                // 显示对话框
+                resultDialog.style.display = 'block';
+                overlay.style.display = 'block';
+            };
+            
+            reader.onerror = function() {
+                status.textContent = '读取文件时出错';
+            };
+            
+            reader.readAsText(selectedFile);
+        });
+        
+        // 关闭对话框
+        closeDialog.addEventListener('click', function() {
+            resultDialog.style.display = 'none';
+            overlay.style.display = 'none';
+        });
+        
+        overlay.addEventListener('click', function() {
+            resultDialog.style.display = 'none';
+            overlay.style.display = 'none';
+        });
+
+        // 保存为Excel功能
+        saveBtn.addEventListener('click', function() {
+            const resultText = resultContent.textContent;
+            if (!resultText.trim()) {
+                alert('没有结果可保存');
+                return;
+            }
+            
+            // 解析结果文本
+            const lines = resultText.split('\n').filter(line => line.trim());
+            const csvContent = [];
+            
+            // 添加CSV表头
+            csvContent.push('序号,数量,药品名称');
+            
+            // 解析每一行数据
+            lines.forEach(line => {
+                const parts = line.split('\t');
+                if (parts.length >= 3) {
+                    const index = parts[0].trim();
+                    const amount = parts[1].trim();
+                    const medicine = parts[2].replace(':', '').trim();
+                    csvContent.push(`${index},${amount},${medicine}`);
+                }
+            });
+            
+            // 创建CSV文件并下载
+            const csvString = csvContent.join('\n');
+            const blob = new Blob([csvString], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            const url = URL.createObjectURL(blob);
+            
+            // 获取当前时间作为文件名
+            const now = new Date();
+            const timestamp = `${now.getFullYear()}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}_${now.getHours().toString().padStart(2, '0')}${now.getMinutes().toString().padStart(2, '0')}`;
+            
+            link.setAttribute('href', url);
+            link.setAttribute('download', `医药费用结果_${timestamp}.csv`);
+            link.style.visibility = 'hidden';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            alert('文件已保存为CSV格式，可以用Excel打开');
+        });
+        
+        // 文件处理函数
+        function getlin(content) {
+            const xyf = {};
+            let flag = false;
+            const lines = content.split('\n');
+            
+            for (const line of lines) {
+                if (line.length < 2) continue; // 行太短则无效
+                
+                if (line.startsWith('西药费') || line.startsWith('中成药费')) {
+                    flag = true;
+                } else if (line[0] !== '\t' && line[0] !== ' ') {
+                    flag = false;
+                }
+                
+                const idx = line.indexOf('\t'); // 找到第一个制表符的位置
+                
+                if (flag && idx !== -1) {
+                    const rest = line.slice(idx + 1);
+                    const tag = rest.split('\t');
+                    if (tag.length >= 2) {
+                        const key = tag[0].trim();
+                        const value = parseFloat(tag[1]);
+                        if (!isNaN(value)) {
+                            if (xyf.hasOwnProperty(key)) {
+                                xyf[key] += value; // 若有则增加
+                            } else {
+                                xyf[key] = value; // 若无则新建
+                            }
+                        }
+                    }
+                }
+            }
+            return xyf;
+        }
+    </script>
+</body>
+</html>
