@@ -300,27 +300,29 @@ def print_t(zd):   #输出统计量
         cprint(f'周{week}-{m} : 合 {n} 人 -- {zd[doctor]}',n>16)
 
 # %%
+@daemon
 def get_handle() -> str:
     global base
-    base = input('请拖入排班文件,或写入带路径的文件名,按回车继续>>')
-    while 1:
-        if ':' not in files:# 若没有：,则判定为没有路径,将为其增加本地路径
+    base = input('选择要处理的文件,按回车继续>>')
+    while base:
+        if ':' not in base:# 若没有：,则判定为没有路径,将为其增加本地路径
             try:
                 dir_path = path.dirname(path.realpath(__file__)) 
                 for filename in listdir(dir_path):
                     if filename.split('.')[-1] == 'xlsx':
                         file_path = path.join(dir_path, filename)
-                        files.append(file_path)
+                        base.append(file_path)
             except:
-                files = input('当前目录没有xlsx文件,请拖入排班文件,或写入带路径的文件名,按回车继续>>')
+                base = input('当前目录没有xlsx文件,请拖入排班文件,或写入带路径的文件名,按回车继续>>')
                 continue
-        if not path.isfile(files):
-            files = input('输入的地址不是合法文件,请拖入排班文件,或写入带路径的文件名,按回车继续>>')
+        if not path.isfile(base):
+            base = input('输入的地址不是合法文件,请拖入排班文件,或写入带路径的文件名,按回车继续>>')
             continue
-        if files.split('.')[-1] != 'xlsx':
-            files = input('输入的地址不是xlsx文件,请拖入排班文件,或写入文件名,按回车继续>>')
+        if base.split('.')[-1] != 'xlsx':
+            base = input('输入的地址不是xlsx文件,请拖入排班文件,或写入文件名,按回车继续>>')
             continue
-        files = input('文件路径错误,请拖入排班文件,或写入文件名,按回车继续>>>>')
+        print('ok')
+        break
     
 
     lasttime = ctime(path.getmtime(base))
@@ -334,13 +336,12 @@ def get_handle() -> str:
 
 # %%
 @daemon
-def main():
-    get_handle()
-    while True:
-        cprint ('选择功能:\n\t 0、对比表\n\t 1、改总表\n\t 2、改分表\n\t 3、统计\n\t q、退出','G')
+def main(file_handle):
+    global base
+    while file_handle:
+        cprint ('选择功能:\n\t 0、对比表\n\t 1、改总表\n\t 2、改分表\n\t 3、主专统计\n\t q、退出','G')
         setnumber= input('>>>')
         if setnumber == 'q':break
-        file_handle=get_handle()
         if file_handle == 0:
             cprint('需要将文件改名为base.xlsx存与本目录下,或将目标文件拖拽到本图标上')
             continue
@@ -387,7 +388,6 @@ def main():
 
 # %%
 print('-----------------花卷子的排班工具 v1.0 --------------------')
-if main() == 0:
+file_handle = get_handle()
+if main(file_handle) == 0:
     input('按任意键退出程序')
-
-
