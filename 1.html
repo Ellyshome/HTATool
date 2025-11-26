@@ -3,503 +3,995 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>医生排班工具</title>
+    <title>花卷子的排班工具</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * {
-            box-sizing: border-box;
             margin: 0;
             padding: 0;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            box-sizing: border-box;
         }
-        
+
         body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: linear-gradient(135deg, #0f2027, #203a43, #2c5364);
-            color: #333;
             min-height: 100vh;
             padding: 20px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            color: #333;
         }
-        
+
         .container {
-            width: 90%;
-            max-width: 1000px;
+            max-width: 1200px;
+            margin: 0 auto;
             background: white;
             border-radius: 15px;
-            padding: 30px;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            padding: 30px;
         }
-        
-        h1 {
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
             color: #2c5364;
-            text-align: center;
-            margin-bottom: 20px;
-            font-size: 2.2rem;
+            font-size: 2.5rem;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1);
         }
-        
+
+        .header p {
+            color: #666;
+            font-size: 1.1rem;
+        }
+
         .upload-section {
-            margin-bottom: 25px;
-            text-align: center;
-        }
-        
-        .file-input {
-            display: none;
-        }
-        
-        .file-label {
-            display: block;
-            padding: 15px 20px;
-            background: #f0f7ff;
-            border: 2px dashed #2c5364;
+            background: #f8f9fa;
+            border: 2px dashed #dee2e6;
             border-radius: 10px;
+            padding: 30px;
+            text-align: center;
+            margin-bottom: 30px;
+            transition: all 0.3s ease;
+        }
+
+        .upload-section:hover {
+            border-color: #007bff;
+            background: #e7f3ff;
+        }
+
+        .upload-section.dragover {
+            border-color: #28a745;
+            background: #d4edda;
+        }
+
+        .upload-btn {
+            background: linear-gradient(135deg, #007bff, #0056b3);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
             cursor: pointer;
-            transition: all 0.3s;
-            margin-bottom: 15px;
+            transition: all 0.3s ease;
+            margin: 10px;
         }
-        
-        .file-label:hover {
-            background: #e0eeff;
-            border-color: #1a4758;
+
+        .upload-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 123, 255, 0.4);
         }
-        
-        .file-name {
-            margin-top: 10px;
+
+        .upload-btn:disabled {
+            background: #6c757d;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .file-info {
+            margin-top: 15px;
             font-size: 0.9rem;
             color: #666;
         }
-        
-        .process-btn {
-            background: #2c5364;
+
+        .function-section {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .function-btn {
+            background: linear-gradient(135deg, #28a745, #1e7e34);
             color: white;
             border: none;
-            padding: 15px 30px;
-            border-radius: 8px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 1rem;
             cursor: pointer;
-            font-size: 1.1rem;
-            font-weight: bold;
-            transition: background 0.3s;
-            display: block;
-            margin: 0 auto;
-            width: 200px;
+            transition: all 0.3s ease;
+            text-align: center;
         }
-        
-        .process-btn:hover {
-            background: #203a43;
+
+        .function-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(40, 167, 69, 0.4);
         }
-        
-        .process-btn:disabled {
-            background: #cccccc;
+
+        .function-btn:disabled {
+            background: #6c757d;
             cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
         }
-        
+
         .result-section {
-            margin-top: 30px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 20px;
+            margin-top: 20px;
             display: none;
         }
-        
-        .result-table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
+
+        .result-section.active {
+            display: block;
         }
-        
-        .result-table th, .result-table td {
-            border: 1px solid #ddd;
-            padding: 8px;
-            text-align: left;
+
+        .result-header {
+            display: flex;
+            justify-content: between;
+            align-items: center;
+            margin-bottom: 15px;
         }
-        
-        .result-table th {
-            background-color: #f2f2f2;
-        }
-        
-        .status {
-            text-align: center;
-            margin: 15px 0;
+
+        .result-title {
+            font-size: 1.3rem;
             color: #2c5364;
             font-weight: bold;
-            min-height: 24px;
         }
-        
-        .no-file {
-            text-align: center;
-            color: #ff5252;
-            margin-top: 10px;
-            display: none;
-        }
-        
-        .action-buttons {
-            display: flex;
-            justify-content: center;
-            gap: 15px;
-            margin-top: 20px;
-        }
-        
-        .action-btn {
-            padding: 10px 20px;
+
+        .download-btn {
+            background: linear-gradient(135deg, #ffc107, #e0a800);
+            color: #212529;
+            border: none;
+            padding: 8px 16px;
             border-radius: 5px;
             cursor: pointer;
             font-size: 0.9rem;
-            border: none;
+        }
+
+        .table-container {
+            max-height: 400px;
+            overflow: auto;
+            border: 1px solid #dee2e6;
+            border-radius: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            background: white;
+        }
+
+        th, td {
+            padding: 12px;
+            text-align: center;
+            border: 1px solid #dee2e6;
+        }
+
+        th {
+            background: #2c5364;
             color: white;
+            position: sticky;
+            top: 0;
         }
-        
-        .compare-btn {
-            background: #17a2b8;
+
+        tr:nth-child(even) {
+            background: #f8f9fa;
         }
-        
-        .merge-btn {
-            background: #28a745;
+
+        .loading {
+            text-align: center;
+            padding: 20px;
+            color: #666;
         }
-        
-        .statistics-btn {
-            background: #ffc107;
-            color: #333;
+
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #f5c6cb;
         }
-        
-        .export-btn {
-            background: #6c757d;
+
+        .success {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 10px 0;
+            border: 1px solid #c3e6cb;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <h1>医生排班工具</h1>
-        
-        <div class="upload-section">
-            <input type="file" id="fileInput" accept=".xlsx,.xls" class="file-input">
-            <label for="fileInput" class="file-label">
-                <strong>点击选择Excel排班文件</strong><br>
-                <span>或拖放文件到此处</span>
-            </label>
-            <div id="fileName" class="file-name">未选择文件</div>
-            <div id="noFile" class="no-file">请先选择文件</div>
+        <div class="header">
+            <h1>花卷子的排班工具</h1>
+            <p>基于JavaScript实现的医生排班处理工具</p>
         </div>
-        
-        <div class="status" id="status"></div>
-        
-        <button id="processBtn" class="process-btn" disabled>加载文件</button>
-        
+
+        <div class="upload-section" id="uploadSection">
+            <input type="file" id="fileInput" accept=".xlsx,.xls" style="display: none;">
+            <button class="upload-btn" onclick="document.getElementById('fileInput').click()">
+                选择Excel文件
+            </button>
+            <p>或拖放文件到此区域</p>
+            <div class="file-info" id="fileInfo">未选择文件</div>
+        </div>
+
+        <div class="function-section">
+            <button class="function-btn" onclick="processFile('compare')" disabled id="compareBtn">
+                对比表功能
+            </button>
+            <button class="function-btn" onclick="processFile('modifyTotal')" disabled id="modifyTotalBtn">
+                改总表功能
+            </button>
+            <button class="function-btn" onclick="processFile('modifySheet')" disabled id="modifySheetBtn">
+                改分表功能
+            </button>
+            <button class="function-btn" onclick="processFile('statistic')" disabled id="statisticBtn">
+                主专统计功能
+            </button>
+        </div>
+
         <div class="result-section" id="resultSection">
-            <div class="action-buttons">
-                <button id="compareBtn" class="action-btn compare-btn">对比表格</button>
-                <button id="mergeBtn" class="action-btn merge-btn">合并表格</button>
-                <button id="statisticsBtn" class="action-btn statistics-btn">统计信息</button>
-                <button id="exportBtn" class="action-btn export-btn">导出结果</button>
+            <div class="result-header">
+                <div class="result-title" id="resultTitle">处理结果</div>
+                <button class="download-btn" onclick="downloadResult()" id="downloadBtn" style="display: none;">
+                    下载结果
+                </button>
             </div>
-            
-            <div id="tableContainer"></div>
+            <div id="resultContent"></div>
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <script>
-        // 获取DOM元素
-        const fileInput = document.getElementById('fileInput');
-        const fileName = document.getElementById('fileName');
-        const processBtn = document.getElementById('processBtn');
-        const status = document.getElementById('status');
-        const noFile = document.getElementById('noFile');
-        const resultSection = document.getElementById('resultSection');
-        const compareBtn = document.getElementById('compareBtn');
-        const mergeBtn = document.getElementById('mergeBtn');
-        const statisticsBtn = document.getElementById('statisticsBtn');
-        const exportBtn = document.getElementById('exportBtn');
-        const tableContainer = document.getElementById('tableContainer');
-        
-        let workbook = null;
-        let doctorsData = [];
-        
-        // 文件选择处理
-        fileInput.addEventListener('change', function(e) {
-            const selectedFile = e.target.files[0];
-            if (selectedFile) {
-                fileName.textContent = `已选择: ${selectedFile.name}`;
-                processBtn.disabled = false;
-                status.textContent = '可以加载文件';
-                noFile.style.display = 'none';
-            } else {
-                fileName.textContent = '未选择文件';
-                processBtn.disabled = true;
-                status.textContent = '';
+        let currentWorkbook = null;
+        let currentFileName = '';
+        let resultData = null;
+        let mergedCellsMap = new Map(); // 存储所有sheet的合并单元格信息
+
+        // 修复1：医生类语法错误（≤ 改为 <=）+ 简化初始化，避免加载阻塞
+        class Doctor {
+            constructor(cell, sheetName, row) {
+                this.cell = cell;
+                this.name = this.extractName(cell.v);
+                this.sheetName = sheetName;
+                this.row = row;
+                this.col = cell.c;
+                this.isValid = this.validateName(); // 姓名有效性校验
+            }
+
+            // 提取姓名（简化逻辑，提高兼容性）
+            extractName(value) {
+                if (!value || typeof value !== 'string') return '';
+                // 提取中文字符（优先）
+                const chineseMatch = value.match(/[\u4e00-\u9fff]+/g);
+                if (chineseMatch && chineseMatch.length > 0) {
+                    return chineseMatch[0].trim();
+                }
+                // 提取英文/数字（备用）
+                const engMatch = value.match(/[a-zA-Z0-9]+/g);
+                return engMatch ? engMatch[0].trim() : '';
+            }
+
+            // 修复2：语法错误 ≤ → <=
+            validateName() {
+                return this.name.length > 0 && this.name.length <= 4 && !this.name.includes('皮');
+            }
+        }
+
+        // 文件上传处理（保持不变）
+        document.getElementById('fileInput').addEventListener('change', handleFileSelect);
+        const uploadSection = document.getElementById('uploadSection');
+
+        uploadSection.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            uploadSection.classList.add('dragover');
+        });
+
+        uploadSection.addEventListener('dragleave', () => {
+            uploadSection.classList.remove('dragover');
+        });
+
+        uploadSection.addEventListener('drop', (e) => {
+            e.preventDefault();
+            uploadSection.classList.remove('dragover');
+            const files = e.dataTransfer.files;
+            if (files.length > 0) {
+                handleFile(files[0]);
             }
         });
-        
-        // 处理按钮点击事件
-        processBtn.addEventListener('click', function() {
-            const selectedFile = fileInput.files[0];
-            if (!selectedFile) {
-                noFile.style.display = 'block';
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                handleFile(file);
+            }
+        }
+
+        // 修复3：简化文件读取逻辑，去掉可能不兼容的 cellStyles: true，增加错误捕获
+        function handleFile(file) {
+            if (!file.name.match(/\.(xlsx|xls)$/)) {
+                showError('请选择Excel文件 (.xlsx 或 .xls)');
                 return;
             }
-            
-            status.textContent = '处理中...';
-            
+
+            currentFileName = file.name;
+            document.getElementById('fileInfo').textContent = `已选择: ${file.name}`;
+
             const reader = new FileReader();
+            // 修复4：使用普通函数，避免 this 指向问题
             reader.onload = function(e) {
                 try {
                     const data = new Uint8Array(e.target.result);
-                    workbook = XLSX.read(data, { type: 'array' });
-                    
-                    // 解析医生数据
-                    doctorsData = parseDoctorsData(workbook);
-                    
-                    status.textContent = `文件加载成功，共 ${workbook.SheetNames.length} 个工作表`;
-                    resultSection.style.display = 'block';
+                    // 去掉 cellStyles: true，提高兼容性（部分Excel版本不支持）
+                    currentWorkbook = XLSX.read(data, { type: 'array' });
+                    // 简化合并单元格解析，避免加载时出错
+                    parseAllMergedCells();
+                    enableButtons();
+                    showSuccess('文件加载成功！请选择要执行的功能。');
                 } catch (error) {
-                    status.textContent = '处理文件时出错: ' + error.message;
+                    // 详细错误提示，便于排查
+                    showError(`文件读取失败: ${error.message}（请确认文件未损坏，且为标准Excel格式）`);
+                    console.error('文件加载错误详情：', error);
                 }
             };
-            
+
+            // 修复5：增加读取错误处理
             reader.onerror = function() {
-                status.textContent = '读取文件时出错';
+                showError('文件读取失败：无法读取文件内容，请检查文件权限或重新选择文件');
             };
-            
-            reader.readAsArrayBuffer(selectedFile);
-        });
-        
-        // 解析医生数据
-        function parseDoctorsData(workbook) {
-            const doctors = [];
-            const sheet = workbook.Sheets[workbook.SheetNames[0]];
-            const jsonData = XLSX.utils.sheet_to_json(sheet, {header:1});
-            
-            // 获取基准颜色
-            const baseColor = jsonData[2][0] && jsonData[2][0].font ? jsonData[2][0].font.color : null;
-            
-            // 遍历行数据
-            for(let i = 0; i < jsonData.length; i++) {
-                const cellValue = jsonData[i][0];
-                if(!cellValue || typeof cellValue !== 'string') continue;
+
+            reader.readAsArrayBuffer(file);
+        }
+
+        // 修复6：简化合并单元格解析逻辑，避免复杂计算导致的错误
+        function parseAllMergedCells() {
+            mergedCellsMap.clear();
+            if (!currentWorkbook) return;
+
+            currentWorkbook.SheetNames.forEach(sheetName => {
+                const sheet = currentWorkbook.Sheets[sheetName];
+                const mergedCells = sheet['!merges'] || [];
+                const mergeInfoList = [];
                 
-                // 检查颜色匹配
-                const cell = sheet[`A${i+1}`];
-                if(cell && cell.font && cell.font.color === baseColor) {
-                    // 提取医生姓名
-                    let name = cellValue;
-                    const nonChinese = cellValue.match(/[^\u4e00-\u9fff]/);
-                    if(nonChinese) {
-                        name = cellValue.split(nonChinese[0])[0];
-                    }
-                    
-                    // 过滤非法姓名
-                    if(name.length <= 4 && !name.includes('皮')) {
-                        doctors.push({
-                            name: name,
-                            row: i+1,
-                            sheet: workbook.SheetNames[0]
+                try {
+                    mergedCells.forEach(merge => {
+                        mergeInfoList.push({
+                            minRow: merge.s.r,
+                            maxRow: merge.e.r,
+                            minCol: merge.s.c,
+                            maxCol: merge.e.c,
+                            masterAddr: XLSX.utils.encode_cell(merge.s)
                         });
+                    });
+                } catch (error) {
+                    console.warn(`解析${sheetName}合并单元格失败，跳过：`, error);
+                }
+                
+                mergedCellsMap.set(sheetName, mergeInfoList);
+            });
+        }
+
+        // 修复7：简化主单元格获取逻辑，增加容错
+        function getMasterCellAddr(sheetName, row, col) {
+            try {
+                const mergeInfoList = mergedCellsMap.get(sheetName) || [];
+                for (const merge of mergeInfoList) {
+                    if (row >= merge.minRow && row <= merge.maxRow && col >= merge.minCol && col <= merge.maxCol) {
+                        return merge.masterAddr;
                     }
                 }
+            } catch (error) {
+                console.warn('获取主单元格失败：', error);
             }
-            
+            return XLSX.utils.encode_cell({ r: row, c: col });
+        }
+
+        function enableButtons() {
+            document.getElementById('compareBtn').disabled = false;
+            document.getElementById('modifyTotalBtn').disabled = false;
+            document.getElementById('modifySheetBtn').disabled = false;
+            document.getElementById('statisticBtn').disabled = false;
+        }
+
+        // 获取医生列表（增加容错，避免因单个医生解析失败导致整体报错）
+        function getDoctors(sheet, sheetName) {
+            const doctors = [];
+            if (!sheet || !sheet['!ref']) return doctors;
+
+            try {
+                const range = XLSX.utils.decode_range(sheet['!ref']);
+                const baseRow = 2; // A3对应的row索引（0开始）
+
+                for (let row = baseRow; row <= range.e.r; row++) {
+                    const cellAddr = XLSX.utils.encode_cell({ r: row, c: 0 });
+                    const cell = sheet[cellAddr];
+                    if (cell && cell.v) {
+                        try {
+                            const doctor = new Doctor(cell, sheetName, row);
+                            if (doctor.isValid) {
+                                doctors.push(doctor);
+                            }
+                        } catch (error) {
+                            console.warn(`解析医生失败（行${row+1}）：`, error);
+                        }
+                    }
+                }
+            } catch (error) {
+                console.error(`获取${sheetName}医生列表失败：`, error);
+                showError(`获取医生列表失败：${error.message}`);
+            }
+
             return doctors;
         }
-        
-        // 查找医生在表格中的位置
-        function findDoctor(sheet, name) {
-            const jsonData = XLSX.utils.sheet_to_json(sheet, {header:1});
-            for(let i = 1; i < jsonData.length; i++) {
-                const cellValue = jsonData[i][1];
-                if(cellValue && typeof cellValue === 'string' && cellValue.includes(name)) {
-                    return {row: i+1, col: 2};
-                }
-            }
-            return null;
-        }
-        
-        // 对比两个单元格
-        function compareCells(sheet1, cell1, sheet2, cell2) {
-            const val1 = sheet1[cell1] ? sheet1[cell1].v : '';
-            const val2 = sheet2[cell2] ? sheet2[cell2].v : '';
-            return val1 === val2;
-        }
-        
-        // 对比表格功能
-        compareBtn.addEventListener('click', function() {
-            if (!workbook || workbook.SheetNames.length < 2) {
-                status.textContent = '需要至少两个工作表进行对比';
-                return;
-            }
-            
-            status.textContent = '正在对比表格...';
-            
+
+        // 医生模糊匹配（保持逻辑不变，增加容错）
+        function fuzzyMatchDoctors(sourceDoctors, targetDoctors) {
+            const matchedPairs = [];
+            const matchedTargetIds = new Set();
+
             try {
-                const sheet1 = workbook.Sheets[workbook.SheetNames[0]];
-                const sheet2 = workbook.Sheets[workbook.SheetNames[1]];
-                const doctors = parseDoctorsData(workbook);
-                
-                let differences = [];
-                doctors.forEach(doctor => {
-                    const target = findDoctor(sheet2, doctor.name);
-                    if(target) {
-                        for(let day = 1; day <= 14; day++) {
-                            const col1 = XLSX.utils.encode_col(doctor.col + day);
-                            const col2 = XLSX.utils.encode_col(target.col + day);
-                            const cell1 = `${col1}${doctor.row}`;
-                            const cell2 = `${col2}${target.row}`;
-                            
-                            if(!compareCells(sheet1, cell1, sheet2, cell2)) {
+                for (const sourceDoc of sourceDoctors) {
+                    // 优先精确匹配
+                    const exactMatch = targetDoctors.find(
+                        targetDoc => targetDoc.name === sourceDoc.name && !matchedTargetIds.has(targetDoc.name)
+                    );
+                    if (exactMatch) {
+                        matchedPairs.push({ source: sourceDoc, target: exactMatch });
+                        matchedTargetIds.add(exactMatch.name);
+                        continue;
+                    }
+
+                    // 模糊匹配（包含关系）
+                    const fuzzyMatch = targetDoctors.find(
+                        targetDoc => (sourceDoc.name.includes(targetDoc.name) || targetDoc.name.includes(sourceDoc.name)) && 
+                                    !matchedTargetIds.has(targetDoc.name)
+                    );
+                    if (fuzzyMatch) {
+                        matchedPairs.push({ source: sourceDoc, target: fuzzyMatch });
+                        matchedTargetIds.add(fuzzyMatch.name);
+                    }
+                }
+            } catch (error) {
+                console.error('医生匹配失败：', error);
+                showError(`医生匹配失败：${error.message}`);
+            }
+
+            return matchedPairs;
+        }
+
+        // 单元格值标准化（保持逻辑不变）
+        function normalizeCellValue(value) {
+            if (!value) return '';
+            return String(value)
+                .trim()
+                .replace(/\s+/g, '') // 去除所有空格
+                .replace(/[^\u4e00-\u9fff_a-zA-Z0-9]/g, '') // 保留中文、字母、数字、下划线
+                .toLowerCase(); // 小写化
+        }
+
+        // 处理带"/"的单元格（保持逻辑不变）
+        function splitSlashValue(value) {
+            if (!value || typeof value !== 'string') return { am: '', pm: '' };
+            if (value.includes('/')) {
+                const [am, pm] = value.split('/').map(v => normalizeCellValue(v));
+                return { am: am || '', pm: pm || '' };
+            }
+            return { am: normalizeCellValue(value), pm: '' };
+        }
+
+        // 对比表功能（保持逻辑不变，增加容错）
+        function compareSheets() {
+            const differences = [];
+            try {
+                if (currentWorkbook.SheetNames.length < 2) {
+                    throw new Error('Excel文件需要包含至少2个工作表（1个总表+1个分表）');
+                }
+
+                const totalSheetName = currentWorkbook.SheetNames[0]; // 总表（第一个sheet）
+                const totalSheet = currentWorkbook.Sheets[totalSheetName];
+                const totalDoctors = getDoctors(totalSheet, totalSheetName); // 总表医生列表
+
+                if (totalDoctors.length === 0) {
+                    throw new Error(`总表${totalSheetName}未找到有效医生，请检查A列医生姓名格式`);
+                }
+
+                // 遍历所有分表（从第二个sheet开始）
+                for (let i = 1; i < currentWorkbook.SheetNames.length; i++) {
+                    const sheetName = currentWorkbook.SheetNames[i];
+                    const sheet = currentWorkbook.Sheets[sheetName];
+                    const sheetDoctors = getDoctors(sheet, sheetName); // 分表医生列表
+
+                    if (sheetDoctors.length === 0) {
+                        console.warn(`分表${sheetName}未找到有效医生，跳过对比`);
+                        continue;
+                    }
+
+                    // 医生匹配（模糊匹配）
+                    const matchedPairs = fuzzyMatchDoctors(sheetDoctors, totalDoctors);
+
+                    if (matchedPairs.length === 0) {
+                        console.warn(`分表${sheetName}未匹配到任何总表医生，跳过对比`);
+                        continue;
+                    }
+
+                    // 对比14天排班（每天对应2列：上午/下午）
+                    for (const pair of matchedPairs) {
+                        const sourceDoc = pair.source; // 分表医生
+                        const targetDoc = pair.target; // 总表医生
+
+                        // 遍历14天（每天2列：上午=day+2，下午=day+3）
+                        for (let day = 1; day <= 14; day++) {
+                            const sheetAmCol = day + 2;
+                            const sheetPmCol = day + 3;
+                            const totalAmCol = day + 2;
+                            const totalPmCol = day + 3;
+
+                            // 上午对比
+                            const sheetAmMasterAddr = getMasterCellAddr(sheetName, sourceDoc.row, sheetAmCol);
+                            const sheetAmCell = sheet[sheetAmMasterAddr];
+                            const sheetAmValue = sheetAmCell ? sheetAmCell.v : '';
+                            const { am: sheetAmNorm } = splitSlashValue(sheetAmValue);
+
+                            const totalAmMasterAddr = getMasterCellAddr(totalSheetName, targetDoc.row, totalAmCol);
+                            const totalAmCell = totalSheet[totalAmMasterAddr];
+                            const totalAmValue = totalAmCell ? totalAmCell.v : '';
+                            const { am: totalAmNorm } = splitSlashValue(totalAmValue);
+
+                            if (sheetAmNorm !== totalAmNorm) {
                                 differences.push({
-                                    name: doctor.name,
-                                    day: day,
-                                    value1: sheet1[cell1] ? sheet1[cell1].v : '',
-                                    value2: sheet2[cell2] ? sheet2[cell2].v : ''
+                                    分表名称: sheetName,
+                                    日期: `第${day}天（上午）`,
+                                    医生姓名: sourceDoc.name,
+                                    总表排班: totalAmValue || '空',
+                                    分表排班: sheetAmValue || '空',
+                                    标准化对比: `总表="${totalAmNorm}" vs 分表="${sheetAmNorm}"`,
+                                    差异状态: sheetAmNorm && totalAmNorm ? '内容不一致' : 
+                                              sheetAmNorm ? '仅分表有排班' : '仅总表有排班'
+                                });
+                            }
+
+                            // 下午对比
+                            const sheetPmMasterAddr = getMasterCellAddr(sheetName, sourceDoc.row, sheetPmCol);
+                            const sheetPmCell = sheet[sheetPmMasterAddr];
+                            const sheetPmValue = sheetPmCell ? sheetPmCell.v : '';
+                            const { am: sheetPmNorm } = splitSlashValue(sheetPmValue);
+
+                            const totalPmMasterAddr = getMasterCellAddr(totalSheetName, targetDoc.row, totalPmCol);
+                            const totalPmCell = totalSheet[totalPmMasterAddr];
+                            const totalPmValue = totalPmCell ? totalPmCell.v : '';
+                            const { am: totalPmNorm } = splitSlashValue(totalPmValue);
+
+                            if (sheetPmNorm !== totalPmNorm) {
+                                differences.push({
+                                    分表名称: sheetName,
+                                    日期: `第${day}天（下午）`,
+                                    医生姓名: sourceDoc.name,
+                                    总表排班: totalPmValue || '空',
+                                    分表排班: sheetPmValue || '空',
+                                    标准化对比: `总表="${totalPmNorm}" vs 分表="${sheetPmNorm}"`,
+                                    差异状态: sheetPmNorm && totalPmNorm ? '内容不一致' : 
+                                              sheetPmNorm ? '仅分表有排班' : '仅总表有排班'
                                 });
                             }
                         }
                     }
-                });
-                
-                // 显示对比结果
-                if(differences.length === 0) {
-                    status.textContent = '对比完成，没有发现差异';
-                } else {
-                    let resultHTML = '<table class="result-table"><tr><th>医生</th><th>日期</th><th>表1值</th><th>表2值</th></tr>';
-                    differences.forEach(diff => {
-                        resultHTML += `<tr>
-                            <td>${diff.name}</td>
-                            <td>第${diff.day}天</td>
-                            <td>${diff.value1}</td>
-                            <td>${diff.value2}</td>
-                        </tr>`;
-                    });
-                    resultHTML += '</table>';
-                    tableContainer.innerHTML = resultHTML;
-                    status.textContent = `对比完成，发现 ${differences.length} 处差异`;
                 }
             } catch (error) {
-                status.textContent = '对比过程中出错: ' + error.message;
+                console.error('对比表功能失败：', error);
+                throw error;
             }
-        });
-        
-        // 合并表格功能
-        mergeBtn.addEventListener('click', function() {
-            if (!workbook || workbook.SheetNames.length < 2) {
-                status.textContent = '需要至少两个工作表进行合并';
-                return;
+
+            if (differences.length === 0) {
+                return {
+                    type: 'compare',
+                    data: [],
+                    title: '排班对比结果',
+                    message: '所有分表与总表排班完全一致，无差异'
+                };
             }
-            
-            status.textContent = '正在合并表格...';
-            
+
+            return {
+                type: 'compare',
+                data: differences,
+                title: '排班对比结果'
+            };
+        }
+
+        // 改总表功能（保持逻辑不变）
+        function modifyTotalSheet() {
+            const modifications = [];
             try {
-                const sheet1 = workbook.Sheets[workbook.SheetNames[0]];
-                const sheet2 = workbook.Sheets[workbook.SheetNames[1]];
-                const doctors = parseDoctorsData(workbook);
-                
-                let changes = 0;
-                doctors.forEach(doctor => {
-                    const target = findDoctor(sheet2, doctor.name);
-                    if(target) {
-                        for(let day = 1; day <= 14; day++) {
-                            const col1 = XLSX.utils.encode_col(doctor.col + day);
-                            const col2 = XLSX.utils.encode_col(target.col + day);
-                            const cell1 = `${col1}${doctor.row}`;
-                            const cell2 = `${col2}${target.row}`;
-                            
-                            if(sheet2[cell2]) {
-                                if(!sheet1[cell1]) {
-                                    sheet1[cell1] = {};
+                if (currentWorkbook.SheetNames.length < 2) {
+                    throw new Error('Excel文件需要包含至少2个工作表（1个总表+1个分表）');
+                }
+
+                const totalSheetName = currentWorkbook.SheetNames[0];
+                const totalSheet = currentWorkbook.Sheets[totalSheetName];
+                const totalDoctors = getDoctors(totalSheet, totalSheetName);
+
+                if (totalDoctors.length === 0) {
+                    throw new Error(`总表${totalSheetName}未找到有效医生`);
+                }
+
+                for (let i = 1; i < currentWorkbook.SheetNames.length; i++) {
+                    const sheetName = currentWorkbook.SheetNames[i];
+                    const sheet = currentWorkbook.Sheets[sheetName];
+                    const sheetDoctors = getDoctors(sheet, sheetName);
+                    const matchedPairs = fuzzyMatchDoctors(sheetDoctors, totalDoctors);
+
+                    for (const pair of matchedPairs) {
+                        const sourceDoc = pair.source;
+                        const targetDoc = pair.target;
+
+                        for (let day = 1; day <= 14; day++) {
+                            const amCol = day + 2;
+                            const pmCol = day + 3;
+
+                            // 上午单元格更新
+                            const sourceAmAddr = getMasterCellAddr(sheetName, sourceDoc.row, amCol);
+                            const targetAmAddr = getMasterCellAddr(totalSheetName, targetDoc.row, amCol);
+                            const sourceAmCell = sheet[sourceAmAddr];
+                            const targetAmCell = totalSheet[targetAmAddr];
+
+                            const sourceAmValue = sourceAmCell ? sourceAmCell.v : '';
+                            const targetAmValue = targetAmCell ? targetAmCell.v : '';
+
+                            if (normalizeCellValue(sourceAmValue) !== normalizeCellValue(targetAmValue)) {
+                                modifications.push({
+                                    分表来源: sheetName,
+                                    医生: sourceDoc.name,
+                                    日期时段: `第${day}天（上午）`,
+                                    原总表值: targetAmValue || '空',
+                                    新总表值: sourceAmValue || '空'
+                                });
+                                if (sourceAmCell) {
+                                    totalSheet[targetAmAddr] = { ...sourceAmCell };
+                                } else {
+                                    delete totalSheet[targetAmAddr];
                                 }
-                                sheet1[cell1].v = sheet2[cell2].v;
-                                sheet1[cell1].t = sheet2[cell2].t;
-                                changes++;
+                            }
+
+                            // 下午单元格更新
+                            const sourcePmAddr = getMasterCellAddr(sheetName, sourceDoc.row, pmCol);
+                            const targetPmAddr = getMasterCellAddr(totalSheetName, targetDoc.row, pmCol);
+                            const sourcePmCell = sheet[sourcePmAddr];
+                            const targetPmCell = totalSheet[targetPmAddr];
+
+                            const sourcePmValue = sourcePmCell ? sourcePmCell.v : '';
+                            const targetPmValue = targetPmCell ? targetPmCell.v : '';
+
+                            if (normalizeCellValue(sourcePmValue) !== normalizeCellValue(targetPmValue)) {
+                                modifications.push({
+                                    分表来源: sheetName,
+                                    医生: sourceDoc.name,
+                                    日期时段: `第${day}天（下午）`,
+                                    原总表值: targetPmValue || '空',
+                                    新总表值: sourcePmValue || '空'
+                                });
+                                if (sourcePmCell) {
+                                    totalSheet[targetPmAddr] = { ...sourcePmCell };
+                                } else {
+                                    delete totalSheet[targetPmAddr];
+                                }
                             }
                         }
                     }
-                });
-                
-                status.textContent = `合并完成，共更新 ${changes} 处数据`;
-                tableContainer.innerHTML = '<div class="success-message">表格已成功合并</div>';
+                }
             } catch (error) {
-                status.textContent = '合并过程中出错: ' + error.message;
+                console.error('改总表功能失败：', error);
+                throw error;
             }
-        });
-        
-        // 统计信息功能
-        statisticsBtn.addEventListener('click', function() {
-            if (!workbook) {
-                status.textContent = '请先加载文件';
-                return;
-            }
-            
-            status.textContent = '正在统计信息...';
-            
+
+            return {
+                type: 'modifyTotal',
+                data: modifications,
+                title: '总表修改结果',
+                modifiedWorkbook: currentWorkbook
+            };
+        }
+
+        // 改分表功能（保持逻辑不变）
+        function modifySheet() {
+            const modifications = [];
             try {
-                const sheet = workbook.Sheets[workbook.SheetNames[0]];
-                const jsonData = XLSX.utils.sheet_to_json(sheet, {header:1});
-                const stats = {};
-                
-                // 统计各专业门诊
-                for(let row = 1; row < jsonData.length; row++) {
-                    for(let col = 2; col < 16; col++) {
-                        const cellValue = jsonData[row][col];
-                        if(typeof cellValue === 'string') {
-                            if(cellValue.includes('主') || cellValue.includes('专') || 
-                               cellValue.includes('甲病') || cellValue.includes('黄褐斑') || 
-                               cellValue.includes('白癜风') || cellValue.includes('痤疮')) {
-                                if(!cellValue.includes('激') && !cellValue.includes('脱') && 
-                                   !cellValue.includes('性') && !cellValue.includes('靶') && 
-                                   !cellValue.includes('注射') && !cellValue.includes('美容') && 
-                                   !cellValue.includes('带疱') && cellValue.length <= 10) {
-                                    const day = col - 1;
-                                    if(!stats[day]) stats[day] = [];
-                                    stats[day].push(`${row}-${cellValue}`);
+                if (currentWorkbook.SheetNames.length < 2) {
+                    throw new Error('Excel文件需要包含至少2个工作表（1个总表+1个分表）');
+                }
+
+                const totalSheetName = currentWorkbook.SheetNames[0];
+                const totalSheet = currentWorkbook.Sheets[totalSheetName];
+                const totalDoctors = getDoctors(totalSheet, totalSheetName);
+
+                if (totalDoctors.length === 0) {
+                    throw new Error(`总表${totalSheetName}未找到有效医生`);
+                }
+
+                for (let i = 1; i < currentWorkbook.SheetNames.length; i++) {
+                    const sheetName = currentWorkbook.SheetNames[i];
+                    const sheet = currentWorkbook.Sheets[sheetName];
+                    const sheetDoctors = getDoctors(sheet, sheetName);
+                    const matchedPairs = fuzzyMatchDoctors(totalDoctors, sheetDoctors);
+
+                    for (const pair of matchedPairs) {
+                        const sourceDoc = pair.source; // 总表医生
+                        const targetDoc = pair.target; // 分表医生
+
+                        for (let day = 1; day <= 14; day++) {
+                            const amCol = day + 2;
+                            const pmCol = day + 3;
+
+                            // 上午单元格更新
+                            const sourceAmAddr = getMasterCellAddr(totalSheetName, sourceDoc.row, amCol);
+                            const targetAmAddr = getMasterCellAddr(sheetName, targetDoc.row, amCol);
+                            const sourceAmCell = totalSheet[sourceAmAddr];
+                            const targetAmCell = sheet[targetAmAddr];
+
+                            const sourceAmValue = sourceAmCell ? sourceAmCell.v : '';
+                            const targetAmValue = targetAmCell ? targetAmCell.v : '';
+
+                            if (normalizeCellValue(sourceAmValue) !== normalizeCellValue(targetAmValue)) {
+                                modifications.push({
+                                    分表名称: sheetName,
+                                    医生: targetDoc.name,
+                                    日期时段: `第${day}天（上午）`,
+                                    原分表值: targetAmValue || '空',
+                                    新分表值: sourceAmValue || '空'
+                                });
+                                if (sourceAmCell) {
+                                    sheet[targetAmAddr] = { ...sourceAmCell };
+                                } else {
+                                    delete sheet[targetAmAddr];
+                                }
+                            }
+
+                            // 下午单元格更新
+                            const sourcePmAddr = getMasterCellAddr(totalSheetName, sourceDoc.row, pmCol);
+                            const targetPmAddr = getMasterCellAddr(sheetName, targetDoc.row, pmCol);
+                            const sourcePmCell = totalSheet[sourcePmAddr];
+                            const targetPmCell = sheet[targetPmAddr];
+
+                            const sourcePmValue = sourcePmCell ? sourcePmCell.v : '';
+                            const targetPmValue = targetPmCell ? targetPmCell.v : '';
+
+                            if (normalizeCellValue(sourcePmValue) !== normalizeCellValue(targetPmValue)) {
+                                modifications.push({
+                                    分表名称: sheetName,
+                                    医生: targetDoc.name,
+                                    日期时段: `第${day}天（下午）`,
+                                    原分表值: targetPmValue || '空',
+                                    新分表值: sourcePmValue || '空'
+                                });
+                                if (sourcePmCell) {
+                                    sheet[targetPmAddr] = { ...sourcePmCell };
+                                } else {
+                                    delete sheet[targetPmAddr];
                                 }
                             }
                         }
                     }
                 }
-                
-                // 显示统计结果
-                let resultHTML = '<table class="result-table"><tr><th>日期</th><th>门诊数量</th><th>详情</th></tr>';
-                Object.keys(stats).sort().forEach(day => {
-                    const count = stats[day].length;
-                    resultHTML += `<tr>
-                        <td>第${day}天</td>
-                        <td>${count}</td>
-                        <td>${stats[day].join(', ')}</td>
-                    </tr>`;
-                });
-                resultHTML += '</table>';
-                tableContainer.innerHTML = resultHTML;
-                status.textContent = '统计完成';
             } catch (error) {
-                status.textContent = '统计过程中出错: ' + error.message;
+                console.error('改分表功能失败：', error);
+                throw error;
             }
-        });
-        
-        // 导出结果功能
-        exportBtn.addEventListener('click', function() {
-            if (!workbook) {
-                status.textContent = '请先加载文件';
+
+            return {
+                type: 'modifySheet',
+                data: modifications,
+                title: '分表修改结果',
+                modifiedWorkbook: currentWorkbook
+            };
+        }
+
+        // 主专统计功能（保持逻辑不变）
+        function statisticAnalysis() {
+            const statistics = [];
+            try {
+                if (currentWorkbook.SheetNames.length < 1) {
+                    throw new Error('Excel文件需要包含至少1个工作表');
+                }
+
+                const sheetName = currentWorkbook.SheetNames[0];
+                const sheet = currentWorkbook.Sheets[sheetName];
+                const doctors = getDoctors(sheet, sheetName);
+                const filterWords = ['激', '脱', '性', '靶', '注射', '美容', '带疱'];
+
+                if (doctors.length === 0) {
+                    throw new Error(`表${sheetName}未找到有效医生`);
+                }
+
+                for (let day = 1; day <= 14; day++) {
+                    const amCol = day + 2;
+                    const pmCol = day + 3;
+                    const dayStats = {
+                        日期: `第${day}天`,
+                        上午主班: [],
+                        上午专班: [],
+                        下午主班: [],
+                        下午专班: [],
+                        全天主班总人数: 0,
+                        全天专班总人数: 0
+                    };
+
+                    for (const doctor of doctors) {
+                        // 上午统计
+                        const amMasterAddr = getMasterCellAddr(sheetName, doctor.row, amCol);
+                        const amCell = sheet[amMasterAddr];
+                        const amValue = amCell ? String(amCell.v).trim() : '';
+
+                        if (amValue && !filterWords.some(word => amValue.includes(word))) {
+                            if (amValue.includes('主') || amValue.includes('甲病') || amValue.includes('黄褐斑') || amValue.includes('白癜风') || amValue.includes('痤疮')) {
+                                dayStats.上午主班.push(doctor.name);
+                            }
+                            if (amValue.includes('专')) {
+                                dayStats.上午专班.push(doctor.name);
+                            }
+                        }
+
+                        // 下午统计
+                        const pmMasterAddr = getMasterCellAddr(sheetName, doctor.row, pmCol);
+                        const pmCell = sheet[pmMasterAddr];
+                        const pmValue = pmCell ? String(pmCell.v).trim() : '';
+
+                        if (pmValue && !filterWords.some(word => pmValue.includes(word))) {
+                            if (pmValue.includes('主') || pmValue.includes('甲病') || pmValue.includes('黄褐斑') || pmValue.includes('白癜风') || pmValue.includes('痤疮')) {
+                                dayStats.下午主班.push(doctor.name);
+                            }
+                            if (pmValue.includes('专')) {
+                                dayStats.下午专班.push(doctor.name);
+                            }
+                        }
+                    }
+
+                    // 去重并计算总人数
+                    const allMaster = [...new Set([...dayStats.上午主班, ...dayStats.下午主班])];
+                    const allSpecial = [...new Set([...dayStats.上午专班, ...dayStats.下午专班])];
+                    dayStats.全天主班总人数 = allMaster.length;
+                    dayStats.全天专班总人数 = allSpecial.length;
+
+                    // 格式化输出
+                    dayStats.上午主班 = dayStats.上午主班.join('、') || '无';
+                    dayStats.上午专班 = dayStats.上午专班.join('、') || '无';
+                    dayStats.下午主班 = dayStats.下午主班.join('、') || '无';
+                    dayStats.下午专班 = dayStats.下午专班.join('、') || '无';
+
+                    statistics.push(dayStats);
+                }
+            } catch (error) {
+                console.error('主专统计功能失败：', error);
+                throw error;
+            }
+
+            return {
+                type: 'statistic',
+                data: statistics,
+                title: '主班与专病门诊统计结果'
+            };
+        }
+
+        // 处理文件功能入口（增加容错）
+        function processFile(functionType) {
+            if (!currentWorkbook) {
+                showError('请先选择Excel文件');
                 return;
             }
-            
-            status.textContent = '正在导出结果...';
-            
+
+            showLoading('正在处理...');
+
             try {
-                // 创建工作簿副本
-                const newWorkbook = XLSX.utils.book_new();
-                workbook.SheetNames.forEach(sheetName => {
-                    const worksheet = XLSX.utils.json_to_sheet(
-                        XLSX.utils.sheet_to_json(workbook.Sheets[sheetName])
-                    );
-                    XLSX.utils.book_append_sheet(newWorkbook, worksheet, sheetName);
-                });
-                
-                // 生成Excel文件
-                const now = new Date();
-                const timestamp = `${now.getFullYear()}${(now.getMonth()+1).toString().padStart(2,'0')}${now.getDate().toString().padStart(2,'0')}_${now.getHours().toString().padStart(2,'0')}${now.getMinutes().toString().padStart(2,'0')}`;
-                const filename = `排班结果_${timestamp}.xlsx`;
-                
-                XLSX.writeFile(newWorkbook, filename);
-                status.textContent = `导出成功: ${filename}`;
+                let result;
+                switch (functionType) {
+                    case 'compare':
+                        result = compareSheets();
+                        break;
+                    case 'modifyTotal':
+                        result = modifyTotalSheet();
+                        break;
+                    case 'modifySheet':
+                        result = modifySheet();
+                        break;
+                    case 'statistic':
+                        result = statisticAnalysis();
+                        break;
+                    default:
+                        throw new Error('未知的功能类型');
+                }
+
+                displayResult(result, functionType);
             } catch (error) {
-                status.textContent = '导出过程中出错: ' + error.message;
+                showError('处理失败: ' + error.message);
             }
-        });
+        }
+
+        // 显示结果（保持不变）
+        function displayResult(result, functionType) {
+            resultData = result;
+            const resultSection = document.getElementById('resultSection');
+            const resultTitle = document.getElementById('resultTitle');
+            const resultContent = document.getElementById('resultContent');
+            const downloadBtn = document.getElementById('downloadBtn');
+
+            resultTitle.textContent = result.title;
+            resultSection.classList.add('active');
+
+            if (result.data.length === 0) {
+                resultContent.innerHTML = `<div class="success">${result.message || '未发现需要处理的数据'}</div>`;
+                downloadBtn.style.display = 'none';
+                return;
+            }
+
+            let html = '<div class="table-container"><table><thead><tr>';
+            const headers = Object.keys(result.data[0]);
+            headers.forEach(header => {
+                html += `<th>${header}</th>`;
+            });
+            html += '</tr></thead><tbody>';
+
+            result.data.forEach(row => {
+                html += '<tr>';
+                headers.forEach(header => {
+                    html += `<td>${row[header] || ''}</td>`;
+                });
+                html += '</tr>';
+            });
+
+            html += '</tbody></table></div>';
+            resultContent.innerHTML = html;
+
+            downloadBtn.style.display = (functionType === 'modifyTotal' || functionType === 'modifySheet') ? 'inline-block' : 'none';
+        }
+
+        // 下载结果（保持不变）
+        function downloadResult() {
+            if (!resultData || !resultData.modifiedWorkbook) {
+                showError('没有可下载的修改结果');
+                return;
+            }
+
+            try {
+                const wb = resultData.modifiedWorkbook;
+                XLSX.writeFile(wb, `修改后的_${currentFileName}`);
+                showSuccess('文件下载成功！');
+            } catch (error) {
+                showError('下载失败: ' + error.message);
+            }
+        }
+
+        // 工具函数（保持不变）
+        function showLoading(message) {
+            const resultContent = document.getElementById('resultContent');
+            resultContent.innerHTML = `<div class="loading">${message}</div>`;
+            document.getElementById('resultSection').classList.add('active');
+        }
+
+        function showError(message) {
+            const resultContent = document.getElementById('resultContent');
+            resultContent.innerHTML = `<div class="error">${message}</div>`;
+            document.getElementById('resultSection').classList.add('active');
+        }
+
+        function showSuccess(message) {
+            const resultContent = document.getElementById('resultContent');
+            resultContent.innerHTML = `<div class="success">${message}</div>`;
+            document.getElementById('resultSection').classList.add('active');
+        }
     </script>
 </body>
 </html>
