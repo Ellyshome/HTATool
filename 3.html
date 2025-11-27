@@ -257,30 +257,32 @@
         let fileName = '';
         let isProcessing = false;
 
-        // DOM元素
-        const uploadBtn = document.getElementById('uploadBtn');
-        const fileInput = document.getElementById('fileInput');
-        const fileInfo = document.getElementById('fileInfo');
-        const dropArea = document.getElementById('drop-area');
-        const compareBtn = document.getElementById('compareBtn');
-        const modifyMasterBtn = document.getElementById('modifyMasterBtn');
-        const modifySubBtn = document.getElementById('modifySubBtn');
-        const statisticBtn = document.getElementById('statisticBtn');
-        const resultSection = document.getElementById('resultSection');
-        const resultTable = document.getElementById('resultTable');
-        const messageArea = document.getElementById('messageArea');
-        const downloadBtn = document.getElementById('downloadBtn');
+        document.addEventListener('DOMContentLoaded', () => {
+            // DOM元素
+            const uploadBtn = document.getElementById('uploadBtn');
+            const fileInput = document.getElementById('fileInput');
+            const fileInfo = document.getElementById('fileInfo');
+            const dropArea = document.getElementById('drop-area');
+            const compareBtn = document.getElementById('compareBtn');
+            const modifyMasterBtn = document.getElementById('modifyMasterBtn');
+            const modifySubBtn = document.getElementById('modifySubBtn');
+            const statisticBtn = document.getElementById('statisticBtn');
+            const resultSection = document.getElementById('resultSection');
+            const resultTable = document.getElementById('resultTable');
+            const messageArea = document.getElementById('messageArea');
+            const downloadBtn = document.getElementById('downloadBtn');
 
-        // 事件监听
-        uploadBtn.addEventListener('click', () => fileInput.click());
-        fileInput.addEventListener('change', handleFileSelect);
-        dropArea.addEventListener('dragover', handleDragOver);
-        dropArea.addEventListener('drop', handleDrop);
-        compareBtn.addEventListener('click', () => processWorkbook('compare'));
-        modifyMasterBtn.addEventListener('click', () => processWorkbook('modifyMaster'));
-        modifySubBtn.addEventListener('click', () => processWorkbook('modifySub'));
-        statisticBtn.addEventListener('click', () => processWorkbook('statistic'));
-        downloadBtn.addEventListener('click', downloadResult);
+            // 事件监听
+            uploadBtn.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', handleFileSelect);
+            dropArea.addEventListener('dragover',handleDragOver);
+            dropArea.addEventListener('drop', handleDrop);
+            compareBtn.addEventListener('click', () => processWorkbook('compare'));
+            modifyMasterBtn.addEventListener('click', () => processWorkbook('modifyMaster'));
+            modifySubBtn.addEventListener('click', () => processWorkbook('modifySub'));
+            statisticBtn.addEventListener('click', () => processWorkbook('statistic'));
+            downloadBtn.addEventListener('click', downloadResult);
+        });
 
         // 处理文件选择
         function handleFileSelect(e) {
@@ -398,7 +400,7 @@
                 if(!this.cell.parent['!merges']) return 0;
                 for(const merge of this.cell.parent['!merges']) {
                     if(merge.s.r <= this.row && this.row <= merge.e.r &&
-                       merge.s.c <= this.col && this.col <= merge.e.c) {
+                        merge.s.c <= this.col && this.col <= merge.e.c) {
                         return this.col === merge.s.c ? 1 : 2;
                     }
                 }
@@ -661,6 +663,7 @@
         function showLoading(message) {
             messageArea.innerHTML = `<div class="loading">${message}</div>`;
         }
+
     </script>
 </body>
 </html>
