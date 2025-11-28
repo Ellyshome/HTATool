@@ -258,7 +258,6 @@ let fileName = '';
 let isProcessing = false;
 let resultData = null; // 用于存储下载所需的数据
 
-<<<<<<< HEAD
         document.addEventListener('DOMContentLoaded', () => {
             // DOM元素
             const uploadBtn = document.getElementById('uploadBtn');
@@ -285,32 +284,6 @@ let resultData = null; // 用于存储下载所需的数据
             statisticBtn.addEventListener('click', () => processWorkbook('statistic'));
             downloadBtn.addEventListener('click', downloadResult);
         });
-=======
-// DOM元素
-const uploadBtn = document.getElementById('uploadBtn');
-const fileInput = document.getElementById('fileInput');
-const fileInfo = document.getElementById('fileInfo');
-const dropArea = document.getElementById('drop-area');
-const compareBtn = document.getElementById('compareBtn');
-const modifyMasterBtn = document.getElementById('modifyMasterBtn');
-const modifySubBtn = document.getElementById('modifySubBtn');
-const statisticBtn = document.getElementById('statisticBtn');
-const resultSection = document.getElementById('resultSection');
-const resultTable = document.getElementById('resultTable');
-const messageArea = document.getElementById('messageArea');
-const downloadBtn = document.getElementById('downloadBtn');
-
-// 事件监听
-uploadBtn.addEventListener('click', () => fileInput.click());
-fileInput.addEventListener('change', handleFileSelect);
-dropArea.addEventListener('dragover', handleDragOver);
-dropArea.addEventListener('drop', handleDrop);
-compareBtn.addEventListener('click', () => processWorkbook('compare'));
-modifyMasterBtn.addEventListener('click', () => processWorkbook('modifyMaster'));
-modifySubBtn.addEventListener('click', () => processWorkbook('modifySub'));
-statisticBtn.addEventListener('click', () => processWorkbook('statistic'));
-downloadBtn.addEventListener('click', downloadResult);
->>>>>>> f030d9d7990da3ca41a679ed040557ed5f051238
 
 // --- 实用工具函数 ---
 
