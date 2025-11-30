@@ -48,11 +48,52 @@ class Doctor {
 // -------------------------
 // 核心：识别医生 getDoctors（优先使用 A3 字体颜色）
 // -------------------------
-function isTextBold(cell) {
-    // SheetJS不支持样式，这里改为检测内容是否包含特殊标记（如【】）
-    if (!cell || !cell.v) return false;
-    const val = String(cell.v).trim();
-    return val.startsWith('【') && val.endsWith('】');
+function getCellFontColor(cell) {
+    if (!cell || !cell.s) return null;
+    
+    // 确保我们正确访问字体对象
+    const font = cell.s.font;
+    if (!font || !font.color) return null;
+    
+    // 处理RGB颜色（最常用）
+    if (font.color.rgb) {
+        // 标准化RGB格式，保持与deepCloneStyle一致
+        let rgb = font.color.rgb.toUpperCase();
+        
+        // 处理各种RGB格式
+        if (rgb.length === 8 && rgb.startsWith('FF')) {
+            // Excel内部格式，保留完整格式
+            return rgb;
+        } else if (rgb.length === 6 && !rgb.startsWith('#')) {
+            // 纯RGB值，添加透明度前缀
+            return 'FF' + rgb;
+        } else if (rgb.startsWith('#')) {
+            // 带#号的格式
+            const hex = rgb.slice(1);
+            return hex.length === 6 ? 'FF' + hex : hex;
+        }
+        return rgb;
+    }
+    
+    // 处理主题颜色，完整保存theme和tint信息
+    if (font.color.theme !== undefined) {
+        const themeStr = 'theme:' + font.color.theme;
+        // 添加tint值（如果存在）
+        return font.color.tint !== undefined ? 
+            `${themeStr}:tint=${font.color.tint}` : themeStr;
+    }
+    
+    // 处理索引颜色，确保正确检测undefined
+    if (font.color.indexed !== undefined) {
+        return 'indexed:' + font.color.indexed;
+    }
+    
+    // 处理可能的其他颜色格式
+    if (typeof font.color === 'string') {
+        return font.color;
+    }
+    
+    return null;
 }
 
 
@@ -62,9 +103,7 @@ function getDoctors(sheet) {
     const range = XLSX.utils.decode_range(sheet['!ref']);
     const baseA3Addr = XLSX.utils.encode_cell({r: 2, c: 0});
     const baseA3 = sheet[baseA3Addr];
-    // 改为检测A3单元格是否包含特殊标记
-    const baseIsBold = baseA3 ? isTextBold(baseA3) : false;
-
+    const baseColor = getCellFontColor(baseA3);
     for (let r = 0; r <= range.e.r; r++) {
         const addr = XLSX.utils.encode_cell({r: r, c: 0}); // A列
         const cell = sheet[addr];
@@ -73,51 +112,30 @@ function getDoctors(sheet) {
         const val = String(cell.v).trim();
         if (!val) continue;
 
-        if (baseIsBold) {
-            const cellIsBold = isTextBold(cell);
-            if (cellIsBold) {
+        if (baseColor) {
+            const cColor = getCellFontColor(cell);
+            
+            if (cColor && cColor === baseColor) {
+
                 doctors.push(new Doctor(cell, r, 0)); 
                 continue;
             }
         }
 
-        // 保留原有文字过滤逻辑
+        // 若没有样式或 A3 没样式，则使用备选文字过滤 (保守)
+        // 避免把表头 / 备注误判为医生
         const headerKeywords = ['备注', '总计', '日期', '姓名', '排班', '时间', '合计'];
         if (headerKeywords.some(k => val.includes(k))) continue;
+        // 长度过滤，尽量贴近 Python 行为: 忽略过长的字符串
         if (val.length > 8) continue;
+        // 含数字或多余字符可能不是姓名
         if (/[A-Za-z0-9]/.test(val)) continue;
 
+        // 通过上面筛选后仍可能包含真实医生
         doctors.push(new Doctor(cell, r, 0)); 
     }
 
     return doctors.filter(d => d.section !== '错误');
-}
-// 修改复制单元格函数（移除样式相关代码）
-function copyCellValueAndStyle(targetSheet, targetAddr, sourceCell) {
-    if (!targetSheet[targetAddr]) {
-        targetSheet[targetAddr] = {};
-    }
-    const tgt = targetSheet[targetAddr];
-
-    // 仅复制值和类型，不处理样式
-    tgt.v = sourceCell?.v ?? '';
-    tgt.t = sourceCell?.t ?? 's';
-}
-
-// 简化合并单元格同步功能（仅处理单元格范围，不处理样式）
-function syncMerges(sourceSheet, targetSheet, sourceRow, targetRow, sourceNameCol, targetNameCol) {
-    if (!sourceSheet || !sourceSheet['!merges']) return;
-    ensureMergesArray(targetSheet);
-    unmergeRow(targetSheet, targetRow);
-
-    const rowMerges = sourceSheet['!merges'].filter(m => m.s.r <= sourceRow && sourceRow <= m.e.r);
-    rowMerges.forEach(m => {
-        const startRel = m.s.c - sourceNameCol;
-        const endRel = m.e.c - sourceNameCol;
-        const newStart = targetNameCol + startRel;
-        const newEnd = targetNameCol + endRel;
-        targetSheet['!merges'].push({ s: { r: targetRow, c: newStart }, e: { r: targetRow, c: newEnd } });
-    });
 }
 
 // -------------------------
