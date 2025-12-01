@@ -52,6 +52,7 @@ function rcToA1(r, c) {  //将行和列索引转换为 Excel A1 格式。
 
 function decodeRange(rangeStr) {  //解码 Excel 范围字符串。
     // "A1:C3" -> {s:{r,c}, e:{r,c}}
+    //console.log(`传入的rangeStr： ${rangeStr}`);
     if (!rangeStr.includes(':')) {
         const a = a1ToRC(rangeStr);
         return { s: a, e: a };
@@ -59,8 +60,11 @@ function decodeRange(rangeStr) {  //解码 Excel 范围字符串。
     const parts = rangeStr.split(':');
     const s = a1ToRC(parts[0]);
     const e = a1ToRC(parts[1]);
+    
     return { s, e };
 }
+
+
 
 function getWorksheetMergeRanges(ws) {
     // 获取工作表中的所有合并范围，返回数组：rangeStr，如 ["A1:C1", "E2:E3", ...]
@@ -70,9 +74,11 @@ function getWorksheetMergeRanges(ws) {
     }
 
     try {
-        // 🌟 关键修正：用 ExcelJS 公开API获取合并范围（MergeRange 对象数组）
-        const mergedRanges = ws.getMergedRanges();
+        
+        const mergedRanges = ws.model.merges;
         // 将 MergeRange 对象转为范围字符串（如 MergeRange → "A1:C1"）
+
+        return mergedRanges;
         return mergedRanges.map(range => range.address);
     } catch (e) {
         // 🌟 修正：输出具体错误日志，方便排查
@@ -102,8 +108,8 @@ function getMergeState(ws, r, c) {   //获取单元格的合并状态。
     return 0;
 }
 
-// 通用深度克隆函数（必须保留，否则样式嵌套对象会浅复制）
-function deepClone(obj) {
+
+function deepClone(obj) {// 通用深度克隆函数（必须保留，否则样式嵌套对象会浅复制）
     if (obj === null || typeof obj !== "object") return obj;
     if (obj instanceof Date) return new Date(obj.getTime());
     if (obj instanceof Array) return obj.map(item => deepClone(item));
@@ -223,15 +229,15 @@ function syncMergesExcelJS(sourceSheet, targetSheet, sourceRow, targetRow, sourc
 }
 
 class Doctor {//医生类
-    constructor(cellValue, r, c) {
+    constructor(cell, r, c) {
         this.row = r;
         this.col = c;
-        this.cell_v = cellValue;
-        this.name = this.extractName(cellValue);
+        this.cell_v = cell && cell.value !== undefined && cell.value !== null ? String(cell.value).trim() : '';
+        this.name = this.extractName(this.cell_v);
         this.cell_t = null;
         this.section = '';
         if (this.name.length > 4 || this.name.includes('皮')) {
-            console.warn(`在表<。。。>发现疑似非法姓名： <${this.name}> , 丢弃`);
+            console.warn(`在表<${cell.worksheet.name}>发现疑似非法姓名： <${this.name}> , 丢弃`);
             this.section = '错误';
         }
     }
@@ -267,7 +273,7 @@ function getDoctorsExcelJS(worksheet) {
         if (!v) continue;
         if (baseIsBold) {
             if (!isTextBoldLikeMarker(v)) continue;
-            doctors.push(new Doctor(v, r - 1, 0));
+            doctors.push(new Doctor(cell, r - 1, 0));
             continue;
         }
         const headerKeywords = ['备注', '总计', '日期', '姓名', '排班', '时间', '合计'];
@@ -275,7 +281,7 @@ function getDoctorsExcelJS(worksheet) {
         if (v.length > 8) continue;
         if (/[A-Za-z0-9]/.test(v)) continue;
 
-        doctors.push(new Doctor(v, r - 1, 0));
+        doctors.push(new Doctor(cell, r - 1, 0));
     }
 
     return doctors.filter(d => d.section !== '错误');
@@ -342,7 +348,7 @@ function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {
     doctors.forEach(doc => {
         const found = lookforExcelJS(masterSheet, doc.name, 1);
         if (!found) {
-            console.warn(`${doc.name} -- 不在总表内`);
+            console.warn(`<${masterSheet.name}>科室内的<${doc.name}> -- 不在总表内`);
             return;
         }
         doc.cell_t = found;
@@ -378,8 +384,8 @@ function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {
 
             if (flag === 0) {
                 // compare - 清洗空白并比较（case-insensitive）
-                const vs = (subVal === null || subVal === undefined) ? '' : String(subVal).trim();
-                const vm = (masterVal === null || masterVal === undefined) ? '' : String(masterVal).trim();
+                const vs = (subVal === null || subVal === undefined) ? '' : String(subVal).trim().replace(/[^\u4e00-\u9fa5]/g, '');
+                const vm = (masterVal === null || masterVal === undefined) ? '' : String(masterVal).trim().replace(/[^\u4e00-\u9fa5]/g, '');
                 if (vs !== vm) diffs.push({ name: doc.name, day, m: vm, s: vs });
             } else {
                 // 修改
@@ -460,6 +466,7 @@ function delflagExcelJS(ws) {
 
 function statisticExcelJS(masterSheet) {//统计表。
     if (!masterSheet) return {};
+    showMsg('正在统计，稍后。。。', 'success');
     delflagExcelJS(masterSheet);
     const rowCount = masterSheet.rowCount || masterSheet.actualRowCount || 0;
     const result = {};
@@ -493,6 +500,7 @@ function runCompareExcelJS(sheets, masterSheet) {//对比表。
     let html = '<thead><tr><th>姓名</th><th>天数</th><th>总表</th><th>分表</th></tr></thead><tbody>';
 
     const worksheets = workbook.worksheets;
+    showMsg('正在对比，稍后。。。', 'success');
     for (let i = 1; i < worksheets.length; i++) {
         const subSheet = worksheets[i];
         const res = changeSheetS_ExcelJS(subSheet, masterSheet, 0);
@@ -510,6 +518,7 @@ function runCompareExcelJS(sheets, masterSheet) {//对比表。
 function runModifyExcelJS(sheets, masterSheet, flag) {//修改表。
     let totalModified = 0;
     const worksheets = workbook.worksheets;
+    showMsg('正在修改，稍后。。。', 'success');
     for (let i = 1; i < worksheets.length; i++) {
         const subSheet = worksheets[i];
         const res = changeSheetS_ExcelJS(subSheet, masterSheet, flag);
