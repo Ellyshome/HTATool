@@ -43,7 +43,7 @@ function processWorkbook(mode) {
         if (!sheets || sheets.length === 0) return showMsg('工作簿没有任何工作表', 'error');
         const masterSheet = sheets[0];
 
-        if (mode === 'compare') runCompareExcelJS(sheets, masterSheet);
+        if (mode === 'compare') runCompareExcelJS();
         else if (mode === 'modifyMaster') runModifyExcelJS(sheets, masterSheet, 1);
         else if (mode === 'modifySub') runModifyExcelJS(sheets, masterSheet, 2);
         else if (mode === 'statistic') runStatisticExcelJS(masterSheet);

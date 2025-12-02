@@ -339,7 +339,7 @@ const getCellSafeValue = (cellObj) => {//获取cell的值（安全的）
             return value;
             };
 
-function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {
+function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {//核心函数，对比与修改sheet。
     const doctors = getDoctorsExcelJS(subSheet);
     const matched = [];
     const diffs = [];
@@ -348,7 +348,7 @@ function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {
     doctors.forEach(doc => {
         const found = lookforExcelJS(masterSheet, doc.name, 1);
         if (!found) {
-            console.warn(`<${masterSheet.name}>科室内的<${doc.name}> -- 不在总表内`);
+            console.warn(`<${subSheet.name}>科室内的<${doc.name}> -- 不在总表内`);
             return;
         }
         doc.cell_t = found;
@@ -369,7 +369,7 @@ function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {
             syncMergesExcelJS(masterSheet, subSheet, masterInfo.r, doc.row, masterNameCol, subNameCol);
         }
 
-        // 对比或修改 14 天数据
+        // 对比或修改
         for (let day = 1; day <= 14; day++) {
             const subC = subNameCol + day;
             const masterC = masterNameCol + day;
@@ -386,7 +386,13 @@ function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {
                 // compare - 清洗空白并比较（case-insensitive）
                 const vs = (subVal === null || subVal === undefined) ? '' : String(subVal).trim().replace(/[^\u4e00-\u9fa5]/g, '');
                 const vm = (masterVal === null || masterVal === undefined) ? '' : String(masterVal).trim().replace(/[^\u4e00-\u9fa5]/g, '');
-                if (vs !== vm) diffs.push({ name: doc.name, day, m: vm, s: vs });
+                if (vs !== vm) {
+                    diffs.push({ name: doc, day, m: vm, s: vs ,cel:subCellObj});
+                    console.log(`发现差异：姓名<${doc.name}> 日期<${day}> 总表<${vm}> 分表<${vs}> 在表<${subSheet.name}>的单元格地址为 <${rcToA1(doc.row, subC)}>`);
+                }
+                else {
+                    console.log(`匹配成功：姓名<${doc.name}> 日期<${day}> 总表<${vm}> 分表<${vs}> 在表<${subSheet.name}>的单元格地址为 <${rcToA1(doc.row, subC)}>`);
+                }
             } else {
                 // 修改
                 let srcCell = (flag === 1) ? subCellObj : masterCellObj;
@@ -493,19 +499,41 @@ function statisticExcelJS(masterSheet) {//统计表。
 
     return result;
 }
+function getstart(num) {//获取星期几与上下午
+  // 1. 参数校验：确保是1-14之间的有效数字（排除非数字、NaN、超出区间值）
+  const isQualified = 
+    typeof num === 'number' && 
+    !isNaN(num) && 
+    num >= 1 && 
+    num <= 14;
 
-function runCompareExcelJS(sheets, masterSheet) {//对比表。
-    //“sheets”是指名称的映射/对象 -> 工作表（我们可以使用“workbook.worksheets”进行迭代）
+  if (!isQualified) {
+    return [];
+  }
+
+  // 2. 核心计算：被除数+1 → 得到周数（1-7）→ 判断am/pm
+  const adjustedDividend = num + 1; // 被除数先+1
+  const weekNum = Math.floor(adjustedDividend / 2); // 周数（1-7，无需额外加减）
+  const period = adjustedDividend % 2 === 0 ? 'Am' : 'Pm'; // 上下午标识
+
+  // 3. 拼接目标格式：周X_Xm（例：周1_am、周7_pm）
+  return `周${weekNum}_${period}`;
+}
+
+function runCompareExcelJS() {//对比表。
+    
     let totalDiffs = 0;
-    let html = '<thead><tr><th>姓名</th><th>天数</th><th>总表</th><th>分表</th></tr></thead><tbody>';
+    let html = '<thead><tr><th>姓名</th><th>日期</th><th>总表</th><th>分表</th><th>科室</th></tr></thead><tbody>';
 
     const worksheets = workbook.worksheets;
+    const masterSheet = worksheets[0];
     showMsg('正在对比，稍后。。。', 'success');
     for (let i = 1; i < worksheets.length; i++) {
         const subSheet = worksheets[i];
+        console.log(`正在对比：表<${subSheet.name}> 与表 <${masterSheet.name}>`);
         const res = changeSheetS_ExcelJS(subSheet, masterSheet, 0);
         res.diffs.forEach(d => {
-            html += `<tr><td>${d.name}</td><td>第${d.day}天</td><td>${d.m}</td><td>${d.s}</td></tr>`;
+            html += `<tr><td>${d.name.name}</td><td>${getstart(d.day)}</td><td>${d.m}</td><td>${d.s}</td><td>${d.cel.worksheet.name} _ ${d.cel.address}</td></tr>`;
         });
         totalDiffs += res.diffs.length;
     }
@@ -531,12 +559,12 @@ function runModifyExcelJS(sheets, masterSheet, flag) {//修改表。
 
 function runStatisticExcelJS(masterSheet) {//统计表-输出。
     const stats = statisticExcelJS(masterSheet);
-    let html = '<thead><tr><th>天数</th><th>人数</th><th>详情</th></tr></thead><tbody>';
+    let html = '<thead><tr><th>日期</th><th>人数</th><th>详情</th></tr></thead><tbody>';
     for (const key in stats) {
         const arr = stats[key];
         const count = arr.length;
         const style = count > 16 ? 'style="background:#ffebee; color:#c62828; font-weight:bold;"' : '';
-        html += `<tr ${style}><td>第${key}天</td><td>${count}</td><td style="text-align:left">${arr.join(', ')}</td></tr>`;
+        html += `<tr ${style}><td>${getstar(key)}</td><td>${count}</td><td style="text-align:left">${arr.join(', ')}</td></tr>`;
     }
     html += '</tbody>';
     if (els && els.table) els.table.innerHTML = html;
