@@ -262,7 +262,7 @@ function getDoctorsExcelJS(worksheet) {
     const doctors = [];
     if (!worksheet) return doctors;
     const rowCount = worksheet.rowCount || worksheet.actualRowCount || 0;
-
+    //console.warn(` 断点：${rowCount}  ${worksheet.rowCount}   ${worksheet.actualRowCount} `)
     // 检查 A3 (r=2,c=0) 是否作为基准（原逻辑: A3 bold）
     const baseA3 = worksheet.getRow(3).getCell(1); // ExcelJS: getRow(3) is row 3 (1-based)
     const baseIsBold = isTextBoldLikeMarker(baseA3.value);
@@ -291,6 +291,7 @@ function getDoctorsExcelJS(worksheet) {
 function lookforExcelJS(worksheet, name, col = 1) {
     if (!worksheet || !name) return null;
     const rowCount = worksheet.rowCount || worksheet.actualRowCount || 0;
+    //console.log(`断点:${rowCount}`);
     const matches = [];
     for (let r = 2; r <= rowCount; r++) {
         const cell = worksheet.getRow(r).getCell(col + 1);
@@ -344,7 +345,7 @@ function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {//核心函数，对
     const matched = [];
     const diffs = [];
     let modifiedCount = 0;
-
+    //console.warn(${doctors.length});
     doctors.forEach(doc => {
         const found = lookforExcelJS(masterSheet, doc.name, 1);
         if (!found) {
@@ -358,7 +359,8 @@ function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {//核心函数，对
     matched.forEach(doc => {
         const masterInfo = doc.cell_t;
         const subNameCol = doc.col; // 0-based
-        const masterNameCol = masterInfo.c;
+        const masterNameCol = masterInfo['c'];
+        //console.log(`mmm:   ${masterInfo['c']}  -  ${doc.row} `);
         
         // 处理合并单元格同步
         if (flag === 1) {
@@ -373,7 +375,7 @@ function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {//核心函数，对
         for (let day = 1; day <= 14; day++) {
             const subC = subNameCol + day;
             const masterC = masterNameCol + day;
-
+            //console.log(`masterC:${masterC}`);
             const subCellObj = subSheet.getRow(doc.row + 1).getCell(subC + 1);
             const masterCellObj = masterSheet.getRow(masterInfo.r + 1).getCell(masterC + 1);
 
@@ -388,10 +390,10 @@ function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {//核心函数，对
                 const vm = (masterVal === null || masterVal === undefined) ? '' : String(masterVal).trim().replace(/[^\u4e00-\u9fa5]/g, '');
                 if (vs !== vm) {
                     diffs.push({ name: doc, day, m: vm, s: vs ,cel:subCellObj});
-                    console.log(`发现差异：姓名<${doc.name}> 日期<${day}> 总表<${vm}> 分表<${vs}> 在表<${subSheet.name}>的单元格地址为 <${rcToA1(doc.row, subC)}>`);
+                    //console.log(`发现差异：姓名<${doc.name}> <${getstart(day)}> 总表<${vm}> 分表<${vs}> 在表<${subSheet.name}>的单元格地址为 <${rcToA1(doc.row, subC)}>`);
                 }
                 else {
-                    console.log(`匹配成功：姓名<${doc.name}> 日期<${day}> 总表<${vm}> 分表<${vs}> 在表<${subSheet.name}>的单元格地址为 <${rcToA1(doc.row, subC)}>`);
+                    //console.log(`匹配成功：姓名<${doc.name}> <${getstart(day)}> 总表<${vm}> 分表<${vs}> 在表<${subSheet.name}>的单元格地址为 <${rcToA1(doc.row, subC)}>`);
                 }
             } else {
                 // 修改
@@ -470,9 +472,9 @@ function delflagExcelJS(ws) {
 }
 
 
-function statisticExcelJS(masterSheet) {//统计表。
+function statisticExcelJS(masterSheet) {//统计主专。
     if (!masterSheet) return {};
-    showMsg('正在统计，稍后。。。', 'success');
+    //showMsg('正在统计，稍后。。。', 'success');
     delflagExcelJS(masterSheet);
     const rowCount = masterSheet.rowCount || masterSheet.actualRowCount || 0;
     const result = {};
@@ -564,7 +566,7 @@ function runStatisticExcelJS(masterSheet) {//统计表-输出。
         const arr = stats[key];
         const count = arr.length;
         const style = count > 16 ? 'style="background:#ffebee; color:#c62828; font-weight:bold;"' : '';
-        html += `<tr ${style}><td>${getstar(key)}</td><td>${count}</td><td style="text-align:left">${arr.join(', ')}</td></tr>`;
+        html += `<tr ${style}><td>${getstart(Number(key))}</td><td>${count}</td><td style="text-align:left">${arr.join(', ')}</td></tr>`;
     }
     html += '</tbody>';
     if (els && els.table) els.table.innerHTML = html;
