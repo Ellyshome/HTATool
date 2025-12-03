@@ -1,5 +1,5 @@
-let workbook = null;
-let fileName = '';
+const matched = [];
+let doctors = [];
 
 function showMsg(msg, type = 'info') {//要显示的消息。
     if (!els || !els.msg) {
@@ -49,10 +49,9 @@ function rcToA1(r, c) {  //将行和列索引转换为 Excel A1 格式。
     return `${indexToColLetter(c)}${r + 1}`;
 }
 
-
 function decodeRange(rangeStr) {  //解码 Excel 范围字符串。
     // "A1:C3" -> {s:{r,c}, e:{r,c}}
-    //console.log(`传入的rangeStr： ${rangeStr}`);
+
     if (!rangeStr.includes(':')) {
         const a = a1ToRC(rangeStr);
         return { s: a, e: a };
@@ -63,8 +62,6 @@ function decodeRange(rangeStr) {  //解码 Excel 范围字符串。
     
     return { s, e };
 }
-
-
 
 function getWorksheetMergeRanges(ws) {
     // 获取工作表中的所有合并范围，返回数组：rangeStr，如 ["A1:C1", "E2:E3", ...]
@@ -229,19 +226,21 @@ function syncMergesExcelJS(sourceSheet, targetSheet, sourceRow, targetRow, sourc
 }
 
 class Doctor {//医生类
-    constructor(cell, r, c) {
+    constructor(cell, r) {
         this.row = r;
-        this.col = c;
-        this.cell_v = cell && cell.value !== undefined && cell.value !== null ? String(cell.value).trim() : '';
-        this.name = this.extractName(this.cell_v);
-        this.cell_t = null;
-        this.section = '';
+
+        //cellString单元格分表
+        this.cellString = cell && cell.value !== undefined && cell.value !== null ? String(cell.value).trim() : '';
+        this.cell_s=cell;
+        this.name = this.extractName(this.cellString);
+        this.cell_m = null; //cell_m单元格总表
+        this.section = cell.worksheet.name;
         if (this.name.length > 4 || this.name.includes('皮')) {
             console.warn(`在表<${cell.worksheet.name}>发现疑似非法姓名： <${this.name}> , 丢弃`);
             this.section = '错误';
         }
     }
-    extractName(value) {
+    extractName(value) {//去除非中文后的姓名
         value = String(value || '').trim();
         if (!value) return '';
         const nonChinese = value.match(/[^\u4e00-\u9fff]/);
@@ -259,10 +258,11 @@ function isTextBoldLikeMarker(val) {
 }
 
 function getDoctorsExcelJS(worksheet) {
-    const doctors = [];
-    if (!worksheet) return doctors;
+    if (!worksheet) {
+    console.warn('获取医生列表失败：工作表不存在', 'error');
+    return;
+}
     const rowCount = worksheet.rowCount || worksheet.actualRowCount || 0;
-    //console.warn(` 断点：${rowCount}  ${worksheet.rowCount}   ${worksheet.actualRowCount} `)
     // 检查 A3 (r=2,c=0) 是否作为基准（原逻辑: A3 bold）
     const baseA3 = worksheet.getRow(3).getCell(1); // ExcelJS: getRow(3) is row 3 (1-based)
     const baseIsBold = isTextBoldLikeMarker(baseA3.value);
@@ -273,7 +273,7 @@ function getDoctorsExcelJS(worksheet) {
         if (!v) continue;
         if (baseIsBold) {
             if (!isTextBoldLikeMarker(v)) continue;
-            doctors.push(new Doctor(cell, r - 1, 0));
+            doctors.push(new Doctor(cell, r - 1));
             continue;
         }
         const headerKeywords = ['备注', '总计', '日期', '姓名', '排班', '时间', '合计'];
@@ -281,27 +281,26 @@ function getDoctorsExcelJS(worksheet) {
         if (v.length > 8) continue;
         if (/[A-Za-z0-9]/.test(v)) continue;
 
-        doctors.push(new Doctor(cell, r - 1, 0));
+        doctors.push(new Doctor(cell, r - 1));
     }
 
     return doctors.filter(d => d.section !== '错误');
 }
 
-
 function lookforExcelJS(worksheet, name, col = 1) {
     if (!worksheet || !name) return null;
     const rowCount = worksheet.rowCount || worksheet.actualRowCount || 0;
-    //console.log(`断点:${rowCount}`);
+
     const matches = [];
     for (let r = 2; r <= rowCount; r++) {
-        const cell = worksheet.getRow(r).getCell(col + 1);
+        const cell = worksheet.getRow(r).getCell(col + 1); 
         const v = (cell && cell.value !== undefined && cell.value !== null) ? String(cell.value).trim() : '';
         if (!v) continue;
         if (v.length > 18) continue;
         if (v.includes('皮') || v.length > 10) continue;
         if (v.includes(name)) matches.push({ r: r - 1, c: col, cell, addr: rcToA1(r - 1, col) });
     }
-    if (matches.length === 1) return matches[0];
+    if (matches.length === 1) return matches[0].cell;
     if (matches.length > 1) {
         console.warn(`lookfor: 找到多个匹配 ${name} -> ${matches.length}`);
         return matches[0];
@@ -313,7 +312,6 @@ const getCellSafeValue = (cellObj) => {//获取cell的值（安全的）
                 
             // 1. 先判断单元格是否存在（避免 cellObj 为 null/undefined）
             if (!cellObj || cellObj.value === undefined) return null;
-            
             const value = cellObj.value;
 
             // 🌟 新增：优先处理「富文本格式」（核心修复）
@@ -338,58 +336,47 @@ const getCellSafeValue = (cellObj) => {//获取cell的值（安全的）
 
             // 3. 基础类型（字符串、数字、布尔）：直接返回（保持原类型）
             return value;
-            };
+};
 
-function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {//核心函数，对比与修改sheet。
-    const doctors = getDoctorsExcelJS(subSheet);
-    const matched = [];
+function changeSheetS_ExcelJS(flag) {//核心函数，对比与修改sheet。
+    masterSheet=workbook.worksheets[0];
     const diffs = [];
-    let modifiedCount = 0;
-    //console.warn(${doctors.length});
-    doctors.forEach(doc => {
-        const found = lookforExcelJS(masterSheet, doc.name, 1);
-        if (!found) {
-            console.warn(`<${subSheet.name}>科室内的<${doc.name}> -- 不在总表内`);
-            return;
-        }
-        doc.cell_t = found;
-        matched.push(doc);
-    });
-
-    matched.forEach(doc => {
-        const masterInfo = doc.cell_t;
-        const subNameCol = doc.col; // 0-based
-        const masterNameCol = masterInfo['c'];
-        //console.log(`mmm:   ${masterInfo['c']}  -  ${doc.row} `);
+    let modifiedCount = 0;  //修改计数
+    matched.forEach(doc => {//对每个匹配成功的医生进行处理。
+        subSheet=doc.cell_s.worksheet;
+        const masterInfo = doc.cell_m;
+        const subNameCol = doc.cell_s.col; // 0-based
+        const masterNameCol = masterInfo.col;
         
         // 处理合并单元格同步
-        if (flag === 1) {
-            // sub -> master 合并复制
-            syncMergesExcelJS(subSheet, masterSheet, doc.row, masterInfo.r, subNameCol, masterNameCol);
-        } else if (flag === 2) {
-            // master -> sub
-            syncMergesExcelJS(masterSheet, subSheet, masterInfo.r, doc.row, masterNameCol, subNameCol);
+        if (flag === 1) {// sub -> master 合并复制。
+            syncMergesExcelJS(subSheet, masterSheet, doc.row, masterInfo.row, subNameCol, masterNameCol);
+        } else if (flag === 2) {// master -> sub合并复制。
+            syncMergesExcelJS(masterSheet, subSheet, masterInfo.row, doc.row, masterNameCol, subNameCol);
         }
 
-        // 对比或修改
-        for (let day = 1; day <= 14; day++) {
+        for (let day = 1; day <= 14; day++) {//合并复制
             const subC = subNameCol + day;
             const masterC = masterNameCol + day;
-            //console.log(`masterC:${masterC}`);
-            const subCellObj = subSheet.getRow(doc.row + 1).getCell(subC + 1);
-            const masterCellObj = masterSheet.getRow(masterInfo.r + 1).getCell(masterC + 1);
 
-
+            //获取主、分表班次单元格对象
+            
+            const subCellObj = subSheet.getRow(doc.cell_s.row).getCell(subC);
+            const masterCellObj = masterSheet.getRow(doc.cell_m.row).getCell(masterC);
+            
             // 调用函数获取cell的值（安全的获取）
+            
             const subVal = getCellSafeValue(subCellObj);
             const masterVal = getCellSafeValue(masterCellObj);
-
+            //const subVal = subCellObj.value
+            //const masterVal = masterCellObj.value
+            
             if (flag === 0) {
                 // compare - 清洗空白并比较（case-insensitive）
                 const vs = (subVal === null || subVal === undefined) ? '' : String(subVal).trim().replace(/[^\u4e00-\u9fa5]/g, '');
                 const vm = (masterVal === null || masterVal === undefined) ? '' : String(masterVal).trim().replace(/[^\u4e00-\u9fa5]/g, '');
                 if (vs !== vm) {
-                    diffs.push({ name: doc, day, m: vm, s: vs ,cel:subCellObj});
+                    diffs.push({ name: doc, day, m: vm, s: vs ,cel:doc.cell_s});
                     //console.log(`发现差异：姓名<${doc.name}> <${getstart(day)}> 总表<${vm}> 分表<${vs}> 在表<${subSheet.name}>的单元格地址为 <${rcToA1(doc.row, subC)}>`);
                 }
                 else {
@@ -424,11 +411,10 @@ function changeSheetS_ExcelJS(subSheet, masterSheet, flag) {//核心函数，对
             }
         }
     });
-
-    return { diffs, modifiedCount, matchedCount: matched.length };
+    return { diffs, modifiedCount, matchedCount: matched.length };//diffs:差异列表，modifiedCount:修改计数，matchedCount:匹配医生计数。
 }
 
-function delflagExcelJS(ws) {
+function delflagExcelJS(ws){//？？删除斜杠，复制样式拆分AM PM。
     if (!ws) return;
     const rowCount = ws.rowCount || ws.actualRowCount || 0;
     // 目标列 2..15 (0-based)
@@ -471,8 +457,7 @@ function delflagExcelJS(ws) {
     }
 }
 
-
-function statisticExcelJS(masterSheet) {//统计主专。
+function statisticExcelJS(masterSheet) {//统计目标sheet的主专，返回统计列表。
     if (!masterSheet) return {};
     //showMsg('正在统计，稍后。。。', 'success');
     delflagExcelJS(masterSheet);
@@ -501,7 +486,8 @@ function statisticExcelJS(masterSheet) {//统计主专。
 
     return result;
 }
-function getstart(num) {//获取星期几与上下午
+
+function getstart(num) {//获取星期几与上下午，根据0-14数字。
   // 1. 参数校验：确保是1-14之间的有效数字（排除非数字、NaN、超出区间值）
   const isQualified = 
     typeof num === 'number' && 
@@ -522,7 +508,7 @@ function getstart(num) {//获取星期几与上下午
   return `周${weekNum}_${period}`;
 }
 
-function runCompareExcelJS() {//对比表。
+function runCompareExcelJS() {//对比doctor对。
     
     let totalDiffs = 0;
     let html = '<thead><tr><th>姓名</th><th>日期</th><th>总表</th><th>分表</th><th>科室</th></tr></thead><tbody>';
@@ -533,7 +519,7 @@ function runCompareExcelJS() {//对比表。
     for (let i = 1; i < worksheets.length; i++) {
         const subSheet = worksheets[i];
         console.log(`正在对比：表<${subSheet.name}> 与表 <${masterSheet.name}>`);
-        const res = changeSheetS_ExcelJS(subSheet, masterSheet, 0);
+        const res = changeSheetS_ExcelJS(0);
         res.diffs.forEach(d => {
             html += `<tr><td>${d.name.name}</td><td>${getstart(d.day)}</td><td>${d.m}</td><td>${d.s}</td><td>${d.cel.worksheet.name} _ ${d.cel.address}</td></tr>`;
         });
@@ -545,13 +531,14 @@ function runCompareExcelJS() {//对比表。
     else showMsg(`发现 ${totalDiffs} 处不一致`, 'error');
 }
 
-function runModifyExcelJS(sheets, masterSheet, flag) {//修改表。
+function runModifyExcelJS(flag) {//使用doctor数据修改表。
     let totalModified = 0;
     const worksheets = workbook.worksheets;
+    if (!worksheets || worksheets.length === 0) return showMsg('工作簿没有任何工作表', 'error');
     showMsg('正在修改，稍后。。。', 'success');
     for (let i = 1; i < worksheets.length; i++) {
         const subSheet = worksheets[i];
-        const res = changeSheetS_ExcelJS(subSheet, masterSheet, flag);
+        const res = changeSheetS_ExcelJS(flag);
         totalModified += res.modifiedCount || 0;
     }
     const type = flag === 1 ? '总表' : '分表';
@@ -559,8 +546,8 @@ function runModifyExcelJS(sheets, masterSheet, flag) {//修改表。
     if (els && els.btns && els.btns.download) els.btns.download.style.display = 'block';
 }
 
-function runStatisticExcelJS(masterSheet) {//统计表-输出。
-    const stats = statisticExcelJS(masterSheet);
+function runStatisticExcelJS() {//调用统计->整合输出。
+    const stats = statisticExcelJS(workbook.worksheets[0]);
     let html = '<thead><tr><th>日期</th><th>人数</th><th>详情</th></tr></thead><tbody>';
     for (const key in stats) {
         const arr = stats[key];
@@ -571,4 +558,22 @@ function runStatisticExcelJS(masterSheet) {//统计表-输出。
     html += '</tbody>';
     if (els && els.table) els.table.innerHTML = html;
     showMsg('统计完成 (红色行表示超过16人)', 'success');
+}
+
+function init(){    //初始化匹配医生列表
+    workbook.worksheets.forEach((sheet, index) => {
+      if (index === 0) return; // 跳过第一个Sheet（索引0）
+    doctors = getDoctorsExcelJS(sheet);    //获取医生列表
+    })
+    // 关键排查：打印 doctors 的值和类型
+    doctors.forEach(doc => {    //匹配医生到总表
+        const found = lookforExcelJS(workbook.worksheets[0], doc.name, 1);
+        if (!found) {
+            console.warn(`<${doc.section}>科室内的<${doc.name}> -- 不在总表内`);
+            return;
+        }
+        doc.cell_m = found;
+        matched.push(doc);  //记录匹配成功的医生
+    });
+    console.log(`共匹配成功 ${matched.length} 位医生`);
 }
