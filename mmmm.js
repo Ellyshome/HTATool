@@ -63,18 +63,15 @@ function decodeRange(rangeStr) {  //解码 Excel 范围字符串。
     return { s, e };
 }
 
-function getWorksheetMergeRanges(ws) {
+function getWorksheetMergeRanges(ws) {//获取sheet的合并范围。
     // 获取工作表中的所有合并范围，返回数组：rangeStr，如 ["A1:C1", "E2:E3", ...]
     if (!ws) {
         console.warn('getWorksheetMergeRanges：工作表 ws 不存在');
         return [];
     }
-
     try {
-        
         const mergedRanges = ws.model.merges;
         // 将 MergeRange 对象转为范围字符串（如 MergeRange → "A1:C1"）
-
         return mergedRanges;
         return mergedRanges.map(range => range.address);
     } catch (e) {
@@ -226,8 +223,8 @@ function syncMergesExcelJS(sourceSheet, targetSheet, sourceRow, targetRow, sourc
 }
 
 class Doctor {//医生类
-    constructor(cell, r) {
-        this.row = r;
+    constructor(cell) {
+        this.row = cell.row;
 
         //cellString单元格分表
         this.cellString = cell && cell.value !== undefined && cell.value !== null ? String(cell.value).trim() : '';
@@ -257,7 +254,7 @@ function isTextBoldLikeMarker(val) {
     return s.startsWith('【') && s.endsWith('】');
 }
 
-function getDoctorsExcelJS(worksheet) {
+function getDoctorsExcelJS(worksheet) {//过滤并压入Doctor。
     if (!worksheet) {
     console.warn('获取医生列表失败：工作表不存在', 'error');
     return;
@@ -273,7 +270,7 @@ function getDoctorsExcelJS(worksheet) {
         if (!v) continue;
         if (baseIsBold) {
             if (!isTextBoldLikeMarker(v)) continue;
-            doctors.push(new Doctor(cell, r - 1));
+            doctors.push(new Doctor(cell));
             continue;
         }
         const headerKeywords = ['备注', '总计', '日期', '姓名', '排班', '时间', '合计'];
@@ -281,13 +278,13 @@ function getDoctorsExcelJS(worksheet) {
         if (v.length > 8) continue;
         if (/[A-Za-z0-9]/.test(v)) continue;
 
-        doctors.push(new Doctor(cell, r - 1));
+        doctors.push(new Doctor(cell));
     }
 
     return doctors.filter(d => d.section !== '错误');
 }
 
-function lookforExcelJS(worksheet, name, col = 1) {
+function lookforExcelJS(worksheet, name, col = 1) {//从总表中找到对应的行。
     if (!worksheet || !name) return null;
     const rowCount = worksheet.rowCount || worksheet.actualRowCount || 0;
 
@@ -560,7 +557,7 @@ function runStatisticExcelJS() {//调用统计->整合输出。
     showMsg('统计完成 (红色行表示超过16人)', 'success');
 }
 
-function init(){    //初始化匹配医生列表
+function init(){    //初始化匹配医生列表。
     workbook.worksheets.forEach((sheet, index) => {
       if (index === 0) return; // 跳过第一个Sheet（索引0）
     doctors = getDoctorsExcelJS(sheet);    //获取医生列表
@@ -576,4 +573,58 @@ function init(){    //初始化匹配医生列表
         matched.push(doc);  //记录匹配成功的医生
     });
     console.log(`共匹配成功 ${matched.length} 位医生`);
+}
+
+/**
+ * 在 ExcelJS（浏览器版）中复制一个矩形范围到指定左上角单元格。
+ *
+ * @param {Worksheet} ws        - 工作表对象
+ * @param {string} srcRange     - 源范围，如 "B2:D6"
+ * @param {string} dstStart     - 目标左上角，如 "F10"
+ */
+function copyRange() {
+    const ExcelJS = window.ExcelJS;
+    ws = workbook.worksheets[0]
+    //const src = ExcelJS.Workbook.xlsx.decodeRange(srcRange); // {top, left, bottom, right}
+    //const dst = ExcelJS.Workbook.xlsx.decodeAddress(dstStart); // {row, col}
+    const src = {top:2,left:'B',bottom:8,right:'P'}
+    const dst = {row:2, col:'T'}
+    
+    const rowOffset = dst.row - src.top;
+    const colOffset = dst.col - src.left;
+
+    /* 1. 复制单元格内容与样式
+    for (let r = src.top; r <= src.bottom; r++) {
+        for (let c = src.left; c <= src.right; c++) {
+
+            const srcCell = ws.getCell(r, c);
+            const dstCell = ws.getCell(r + rowOffset, c + colOffset);
+
+            // 拷贝值（支持公式）
+            dstCell.value = srcCell.value;
+
+            // 拷贝所有样式
+            dstCell.style = JSON.parse(JSON.stringify(srcCell.style));
+        }
+    }*/
+
+    // 2. 复制合并单元格
+    ws.model.merges.forEach(m => {
+        console.log('1111')
+        if (
+            m.top    >= src.top    && m.bottom <= src.bottom &&
+            m.left   >= src.left   && m.right  <= src.right
+        ) {
+            const newMerge = {
+                top:    m.top    + rowOffset,
+                bottom: m.bottom + rowOffset,
+                left:   m.left   + colOffset,
+                right:  m.right  + colOffset
+            };
+            ws.mergeCells(
+                newMerge.top, newMerge.left,
+                newMerge.bottom, newMerge.right
+            );
+        }
+    });
 }
