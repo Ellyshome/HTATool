@@ -50,8 +50,8 @@ function isCellInRange(cell, rangeS) {   //检查单元格是否在指定范围�
     return (r >= range.s.r && r <= range.e.r && c >= range.s.c && c <= range.e.c);
 }
 
-function getMergeState(ws,cell) {   //获取单元格的合并状态。
-    const ranges = getMR(ws);
+function getMergeState(cell) {   //获取单元格的合并状态。
+    const ranges = getMR(cell.worksheet);
     r = decodeRange(cell.address).s.r;
     c = decodeRange(cell.address).s.c;
     for (const range of ranges) {
