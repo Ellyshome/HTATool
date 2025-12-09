@@ -565,7 +565,7 @@ function runModifyExcelJS(flag) {//改总\分表。
 
 function runStatisticExcelJS() {//调用统计->整合输出。
     const stats = statisticExcelJS();
-    let html = '<thead><tr><th>日期</th><th>人数</th><th>详情</th></tr></thead><tbody>';
+    let html = '<thead><tr><th>日期</th><th>人数</th><th>详情（行号-门诊类型）</th></tr></thead><tbody>';
     for (const key in stats) {
         const arr = stats[key];
         const count = arr.length;
