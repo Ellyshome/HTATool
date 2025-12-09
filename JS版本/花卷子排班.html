@@ -216,14 +216,17 @@
                 <h2>处理结果</h2>
                 <button class="download-btn" id="downloadBtn">下载结果文件</button>
             </header>
+
             <div id="messageArea"></div>
             <div class="table-container">
                 <table id="resultTable"></table>
             </div>
         </section>
+        <div style="text-align:center;">
+            <img src="https://telegraph-image-92x.pages.dev/file/92b4a5b1d42b38e022fea-c6ac364b69db6fb35f.png" style="width:100px;" alt="打赏鼓励">
+            <h5>打赏鼓励</h5>
+        </div>
     </div>
-
-    
 <script>
     const els = {
     uploadBtn: document.getElementById('uploadBtn'),
@@ -298,7 +301,7 @@ async function handleFileSelectExcelJS(e) {//文件加载/拖放/下载
         }
         // 拼接科室统计文本（适配任意科室）
         const sectionText = Object.entries(sectionCount)
-        .map(([section, count]) => `${section}${count}人; `);
+        .map(([section, count]) => `${section}${count}人 `);
         showMsg(`文件加载完成，共匹配成功 ${matched.size} 位医生，其中${sectionText}注意核对！` ,'success');
         let html = '<thead><tr><th>姓名</th><th>科室</th><th>异常</th></thead><tbody>';
         nd.forEach(item => {
@@ -824,7 +827,5 @@ function init(){    //初始化匹配医生列表。
     return notinMsheet;
 }
 </script>
-
   </body>
 </html>
-
