@@ -166,11 +166,10 @@ function changeSheetS(flag) {//核心函数，对比与修改sheet。
             try{
                 //compareMerge(dif,flag) ; //先处理合并单元格
                 compareMerge(sourceCell, targetCell,dif['d']) ; //先处理合并单元格
-                deepcopy(sourceCell, targetCell); //再复制值与样式
+                if (getMergeState(sourceCell)!==2) deepcopy(sourceCell, targetCell); //确定源非附属cell再复制值与样式
                 count++;
             }catch (e) {
-                bug.push([`修改<${targetCell.worksheet.name}>的<${doc.name}>条目 ${targetCell.address} 时遇到问题:${e.message}。`]); 
-                console.error(`修改<${targetCell.worksheet.name}>的<${doc.name}>条目<${targetCell.address}>时遇到问题`, e.message);
+                bug.push([`修改<${targetCell.worksheet.name}>的<${doc.name}>条目< ${targetCell.address} >时遇到问题:${e.message}。`]);   
         }});
     })
     return [count,bug];
