@@ -75,7 +75,7 @@ async function handleFileSelectExcelJS(e) {//文件加载/拖放/下载
         showMsg(`文件加载完成，共匹配成功 ${matched.size} 位医生，其中${sectionText}注意核对！` ,'success');
         let html = '<thead><tr><th>姓名</th><th>科室</th><th>异常</th></thead><tbody>';
         nd.forEach(item => {
-            html += `<tr><td>${item.name}</td><td>${item.section}</td><td>${item.reason}</td></tr>`;
+            html += `<tr><td>${item.name}</td><td>${item.section}_${item.row}</td><td>${item.reason}</td></tr>`;
         });
 
         html += '</tbody>';
@@ -358,7 +358,7 @@ function IsName(val,sheet) {// 基于既定规则，判断文本是人名
         //console.warn(`在表<${sheet.name}>发现疑似非法姓名： <${val}> , 丢弃.原因:包含关键词`);
         return false;
     }
-    if (val.length > 15) {
+    if (val.length > 15||val.length < 2) {
         console.warn(`在表<${sheet.name}>发现疑似非法姓名： <${val}> , 丢弃.原因:长度超过15`);
         return false;
     }
@@ -587,8 +587,7 @@ function init(){    //初始化匹配医生列表。
     doctors.forEach(doc => {    //匹配医生到总表
         const found = lookfor(workbook.worksheets[0], doc.name, 1);
         if (!found) {
-            notinMsheet.push({section:doc.section,name:doc.name,reason:'不在总表内'});
-            //nsole.warn(`<${doc.section}>科室内的<${doc.name}> -- 不在总表内`);
+            notinMsheet.push({name:doc.name,section:doc.section,row:doc.cell_s.row,reason:'不在总表内'});
             return;
         }
         doc.cell_m = found;
