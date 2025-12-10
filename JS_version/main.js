@@ -353,7 +353,7 @@ class Doctor {//医生类
 
 function IsName(val,sheet) {// 基于既定规则，判断文本是人名
     //排除为姓名的规则
-    const Keywords = ['备注', '总计', '日期', '姓名', '排班', '时间', '合计','专家','黑专','普门','皮'];
+    const Keywords = ['备注', '总计', '日期', '姓名', '排班', '时间', '合计','专家','黑专','普门','皮',‘说明’,‘补充’];
     if (!val || Keywords.some(k => val.includes(k))) {
         //console.warn(`在表<${sheet.name}>发现疑似非法姓名： <${val}> , 丢弃.原因:包含关键词`);
         return false;
@@ -388,7 +388,7 @@ function lookfor(worksheet, name, col = 1) {   //从总表中找到对应的行�
     const matches = [];
     for (let r = 2; r <= rowCount; r++) {
         const cell = worksheet.getRow(r).getCell(col + 1); 
-        const v = (cell && cell.value !== undefined && cell.value !== null) ? String(cell.value).trim() : '';
+        const v = (cell && getCellText(cell) !== undefined && cell.value !== null) ? String(cell.value).trim() : '';
         if (!v) continue;
         if (v.includes('皮') || v.length > 10) continue;
         if (v.includes(name)) matches.push(cell);
