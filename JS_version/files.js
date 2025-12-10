@@ -70,7 +70,7 @@ async function handleFileSelectExcelJS(e) {//文件加载/拖放/下载
         }
         // 拼接科室统计文本（适配任意科室）
         const sectionText = Object.entries(sectionCount)
-        .map(([section, count]) => `${section}${count}人; `);
+        .map(([section, count]) => `表<${section}>${count}人; `);
         showMsg(`文件加载完成，共匹配成功 ${matched.size} 位医生，其中${sectionText}注意核对！` ,'success');
         let html = '<thead><tr><th>姓名</th><th>科室</th><th>异常</th></thead><tbody>';
         nd.forEach(item => {
