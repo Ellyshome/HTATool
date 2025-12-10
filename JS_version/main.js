@@ -237,7 +237,7 @@ class Doctor {//医生类
 
 function IsName(val,sheet) {// 基于既定规则，判断文本是人名
     //排除为姓名的规则
-    const Keywords = ['备注', '总计', '日期', '姓名', '排班', '时间', '合计','专家','黑专','普门','皮','说明','补充'];
+    const Keywords = ['备注', '总计', '日期', '姓名', '排班', '时间', '合计','专家','黑专','普门','皮','说明','补充','人数'];
     if (!val || Keywords.some(k => val.includes(k))) {
         //console.warn(`在表<${sheet.name}>发现疑似非法姓名： <${val}> , 丢弃.原因:包含关键词`);
         return false;
@@ -479,7 +479,7 @@ function init(){    //初始化匹配医生列表。
     doctors.forEach(doc => {    //匹配医生到总表
         const found = lookfor(workbook.worksheets[0], doc.name, 1);
         if (!found) {
-            notinMsheet.push({name:doc.name,section:doc.section,row:doc.cell_s.row,reason:'不在总表内'});
+            notinMsheet.push({name:doc.name,section:doc.section,row:doc.cell_s.row,reason:'被判定为姓名，且总表中未找到对应项'});
             return;
         }
         doc.cell_m = found;
