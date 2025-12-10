@@ -155,23 +155,29 @@ function decodeRange(rangeStr) {  //解码 Excel 范围字符串。
 
 function changeSheetS(flag) {//核心函数，对比与修改sheet。
     //flag = 0 主标覆盖分表；flag = 1 分表覆盖主标
-    count=0
+    count=0;
+    bug=[];
     diffs.forEach(doc =>{
+        
        doc.dif.forEach(dif => {
-            const sourceCell = flag ? dif.subcell : dif.mastercell;
-            const targetCell = flag ? dif.mastercell : dif.subcell;
-            compareMerge(dif,flag); //先处理合并单元格
-            deepcopy(sourceCell, targetCell); //再复制值与样式
+            const targetCell = flag ? dif.subcell : dif.mastercell;
+            const sourceCell = flag ? dif.mastercell : dif.subcell;
+            //console.log(`${flag?'分表':'总表'}<${doc.name}>条目<${targetCell.address}>修改中...`);
+            try{
+                compareMerge(dif,flag) ; //先处理合并单元格
+                deepcopy(sourceCell, targetCell); //再复制值与样式
             count++;
-        });
+            }catch (e) {
+                bug.push([`修改<${targetCell.worksheet.name}>的<${doc.name}>条目 ${targetCell.address} 时遇到问题:${e.message}。`]); 
+                console.error(`修改<${targetCell.worksheet.name}>的<${doc.name}>条目<${targetCell.address}>时遇到问题`, e.message);
+        }});
     })
-    return count;
+    return [count,bug];
 }
 
 function compareMerge(dif,flag){//cell合并状态，根据diffs中doctor的dif列表。
     const [tar_cell, sou_cell] = flag ? [dif['subcell'], dif['mastercell']] : [dif['mastercell'] , dif['subcell']];
     tar_sheet = tar_cell.worksheet;
-
     if (getMergeState(sou_cell)===getMergeState(tar_cell)) return;
     if (getMergeState(sou_cell)===0) {tar_sheet.unMergeCells(tar_cell.address);return;}//源单元格被标记为 分散 状态
     row_se = tar_cell.row;
@@ -431,9 +437,17 @@ function runModifyExcelJS(flag) {//改总\分表。
         const worksheets = workbook.worksheets;
         if (!worksheets || worksheets.length === 0) return showMsg('工作簿没有任何工作表', 'error');
         if (diffs.size === 0 ) Compare();
-        count = changeSheetS(flag);
+        const[count,bug] = changeSheetS(flag);
         const type = flag? '分表' : '总表';
         showMsg(`${type}修改完成！共修改${count}处，请下载保存。`, 'success');
+        if(bug.length!==0){
+            let html = `<thead><tr><th>异常条目数：${bug.length}注意手动处理</th></tr></thead><tbody>`;
+            for (const key in bug) {
+                html += `<tr><td>${bug[key]}</td></tr>`;
+            }
+            html += '</tbody>';
+            if (els && els.table) els.table.innerHTML = html;
+        }
         els.btns.download.style.display = 'block';
     }, 0);
 }
@@ -444,7 +458,7 @@ function runStatisticExcelJS() {//调用统计->整合输出。
     for (const key in stats) {
         const arr = stats[key];
         const count = arr.length;
-        const style = count > 16 ? 'style="background:#ffebee; color:#c62828; font-weight:bold;"' : '';//？？？？
+        const style = count > 16 ? 'style="background:#ffebee; color:#c62828; font-weight:bold;"' : '';
         html += `<tr ${style}><td>${getstart(Number(key))}</td><td>${count}</td><td style="text-align:left">${arr.join(', ')}</td></tr>`;
     }
     html += '</tbody>';
