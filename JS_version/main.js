@@ -388,7 +388,7 @@ function lookfor(worksheet, name, col = 1) {   //从总表中找到对应的行�
     const matches = [];
     for (let r = 2; r <= rowCount; r++) {
         const cell = worksheet.getRow(r).getCell(col + 1); 
-        const v = (cell && cell.value !== undefined && cell.value !== null) ? String(cell.value).trim() : '';
+        const v = (cell && getCellText(cell) !== undefined && cell.value !== null) ? String(cell.value).trim() : '';
         if (!v) continue;
         if (v.includes('皮') || v.length > 10) continue;
         if (v.includes(name)) matches.push(cell);
