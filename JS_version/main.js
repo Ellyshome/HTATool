@@ -165,7 +165,7 @@ function changeSheetS(flag) {//核心函数，对比与修改sheet。
             //console.log(`${flag?'分表':'总表'}<${doc.name}>条目<${targetCell.address}>修改中...`);
             try{
                 //compareMerge(dif,flag) ; //先处理合并单元格
-                compareMerge(sourceCell, targetCell,dif) ; //先处理合并单元格
+                compareMerge(sourceCell, targetCell,dif['d']) ; //先处理合并单元格
                 deepcopy(sourceCell, targetCell); //再复制值与样式
                 count++;
             }catch (e) {
@@ -175,14 +175,16 @@ function changeSheetS(flag) {//核心函数，对比与修改sheet。
     })
     return [count,bug];
 }
-function compareMerge(sou_cell, tar_cell,dif){//cell合并状态，根据diffs中doctor的dif列表。
+function compareMerge(sourceCell, targetCell,day){//cell合并状态，根据diffs中doctor的dif列表。
 //function compareMerge(dif,flag){//cell合并状态，根据diffs中doctor的dif列表。
-    //const [tar_cell, sou_cell] = flag ? [dif['subcell'], dif['mastercell']] : [dif['mastercell'] , dif['subcell']];
-    tar_sheet = tar_cell.worksheet;
-    if (getMergeState(sou_cell)===getMergeState(tar_cell)) return;
-    if (getMergeState(sou_cell)===0) {tar_sheet.unMergeCells(tar_cell.address);return;}//源单元格被标记为 分散 状态
-    row_se = tar_cell.row;
-    const [col_s,col_e] = dif['day'] % 2 === 0 ? [tar_cell.col+1,tar_cell.col] : [tar_cell.col,tar_cell.col-1];
+    //const [targetCell, sourceCell] = flag ? [dif['subcell'], dif['mastercell']] : [dif['mastercell'] , dif['subcell']];
+    tar_sheet = targetCell.worksheet;
+    if (getMergeState(sourceCell)===getMergeState(targetCell)) return;
+    if (getMergeState(sourceCell)===0) {tar_sheet.unMergeCells(targetCell.address);return;}//源单元格被标记为 分散 状态
+    row_se = targetCell.row;
+    if (tar_sheet.name === workbook.worksheets[0].name);//如果要改的是总表
+    const [col_s,col_e] = day % 2 === 0 ? [targetCell.col-1,targetCell.col] : [targetCell.col,targetCell.col+1];
+    //console.log(`第${day}组，合并单元格：${targetCell.address} 范围 ${row_se}-${col_s}----${row_se}-${col_e}`);
     tar_sheet.mergeCells(row_se,col_s,row_se,col_e);  
     }
 
