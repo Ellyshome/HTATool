@@ -373,7 +373,7 @@ function statisticExcelJS() {//统计sheet主专，返回结果列表。
     const rowCount = masterSheet.rowCount || masterSheet.actualRowCount || 0;
     const result = {};
     const include = ['主', '专', '甲病', '黄褐斑', '白癜风', '痤疮'];
-    const exclude = ['激', '脱', '性', '靶', '注射', '美容', '带疱'];
+    const exclude = ['激', '脱', '性', '靶', '注射', '美容', '带疱','斑秃'];
 
     for (let col = 3; col <= 16; col++) {//从第二列开始
         
