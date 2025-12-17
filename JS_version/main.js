@@ -157,9 +157,10 @@ function changeSheetS(flag) {//核心函数，对比与修改sheet。
     //flag = 0 主标覆盖分表；flag = 1 分表覆盖主标
     count=0;
     bug=[];
-    diffs.forEach(doc =>{
-        
-       doc.dif.forEach(dif => {
+    time = 5;
+    while(time>0){
+        diffs.forEach(doc =>{
+        doc.dif.forEach(dif => {
             const targetCell = flag ? dif.subcell : dif.mastercell;
             const sourceCell = flag ? dif.mastercell : dif.subcell;
             //console.log(`${flag?'分表':'总表'}<${doc.name}>条目<${targetCell.address}>修改中...`);
@@ -172,6 +173,11 @@ function changeSheetS(flag) {//核心函数，对比与修改sheet。
                 bug.push([`修改<${targetCell.worksheet.name}>的<${doc.name}>条目< ${targetCell.address} >时遇到问题:${e.message}。`]);   
         }});
     })
+    Compare(); //重新对比，确保所有差异被处理
+    if(diffs.size===0) break;
+    time--;
+    console.log(`剩余差异${diffs.size}，继续处理...`);
+    }
     return [count,bug];
 }
 function compareMerge(sourceCell, targetCell,day){//cell合并状态，根据diffs中doctor的dif列表。
